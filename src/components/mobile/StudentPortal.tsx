@@ -31,6 +31,10 @@ import {
   Send,
   Sparkles
 } from 'lucide-react';
+import { StudentDashboard } from './StudentDashboard';
+
+export { StudentDashboard };
+
 
 interface StudentPortalProps {
   student: Student;
@@ -168,7 +172,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
           </div>
         )}
 
-        {/* TAB 1: HOME */}
+        {/* TAB 1: HOME - STUDENT DASHBOARD */}
         {activeTab === 'home' && (
           <>
             {/* Live Next Class Card */}
@@ -188,51 +192,18 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
               </div>
             </div>
 
-            {/* Assignments Action Bar */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <FileText className="w-3.5 h-3.5 text-indigo-400" />
-                  Pending Homework ({pendingAssignments.length})
-                </h4>
-                <button 
-                  onClick={() => setActiveTab('academics')}
-                  className="text-xs text-indigo-400 hover:text-indigo-300"
-                >
-                  View All
-                </button>
-              </div>
-
-              <div className="space-y-2">
-                {pendingAssignments.slice(0, 2).map((asn) => (
-                  <div 
-                    key={asn.id}
-                    className="p-3 bg-slate-900 border border-slate-800 rounded-xl hover:border-slate-700 transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <span className="text-[10px] font-semibold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">
-                          {asn.subject}
-                        </span>
-                        <h5 className="text-xs font-bold text-white mt-1.5">{asn.title}</h5>
-                        <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-amber-400" />
-                          Due: {asn.dueDate} ({asn.dueTime})
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => handleUploadClick(asn.id)}
-                        disabled={submittingId === asn.id}
-                        className="px-3 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg flex items-center gap-1 cursor-pointer transition-colors shadow-sm disabled:opacity-50"
-                      >
-                        <Upload className="w-3 h-3" />
-                        <span>{submittingId === asn.id ? 'Submitting...' : 'Turn In'}</span>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Dedicated Student Dashboard: Current Assignments, Recent Grades, & Quick-Chat */}
+            <StudentDashboard
+              student={student}
+              grades={grades}
+              assignments={assignments}
+              chatMessages={chatMessages}
+              onSubmitAssignment={onSubmitAssignment}
+              onSendMessage={onSendMessage}
+              onNavigateToAcademics={() => setActiveTab('academics')}
+              onNavigateToChat={() => setActiveTab('chat')}
+              onNavigateToSchedule={() => setActiveTab('schedule')}
+            />
 
             {/* School Noticeboard Snippet */}
             <div>

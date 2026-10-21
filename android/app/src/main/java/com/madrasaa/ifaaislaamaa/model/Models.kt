@@ -16,10 +16,13 @@ data class Student(
     val rollNumber: String,
     val parentName: String,
     val parentPhone: String,
-    val attendanceRate: Float,
+    var attendanceRate: Float,
     val currentGpa: Float,
     val busRoute: String,
-    val busStatus: String
+    val busStatus: String,
+    val dob: String = "2010-04-12",
+    val bloodGroup: String = "O+",
+    val avatar: String = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"
 )
 
 data class AttendanceRecord(
@@ -42,7 +45,8 @@ data class SubjectGrade(
     val score: Int,
     val letterGrade: String,
     val credits: Float,
-    val comments: String
+    val comments: String,
+    val term: String = "Fall Term 2026"
 )
 
 data class Assignment(
@@ -52,10 +56,11 @@ data class Assignment(
     val grade: Int,
     val teacherName: String,
     val dueDate: String,
-    val status: String,
+    var status: String, // "pending", "submitted", "graded"
     val totalScore: Int,
-    val obtainedScore: Int? = null,
-    val description: String
+    var obtainedScore: Int? = null,
+    val description: String,
+    val dueTime: String = "11:59 PM"
 )
 
 data class FeeInvoice(
@@ -64,7 +69,29 @@ data class FeeInvoice(
     val term: String,
     val amount: Double,
     val dueDate: String,
-    val isPaid: Boolean
+    var isPaid: Boolean,
+    val description: String = "Term Tuition & Quran Curriculum",
+    var receiptNumber: String? = null,
+    var paymentMethod: String? = null
+)
+
+data class TimetableSlot(
+    val id: String,
+    val day: String,
+    val time: String,
+    val subject: String,
+    val teacher: String,
+    val room: String
+)
+
+data class NoticeAnnouncement(
+    val id: String,
+    val title: String,
+    val category: String,
+    val date: String,
+    val targetAudience: String,
+    val content: String,
+    val sender: String
 )
 
 data class TeacherProfile(

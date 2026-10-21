@@ -4,11 +4,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -16,9 +19,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.madrasaa.ifaaislaamaa.model.*
@@ -27,7 +33,25 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MadrasaaIfaaIslaamaaApp()
+            MaterialTheme(
+                colorScheme = darkColorScheme(
+                    primary = Color(0xFF6366F1),
+                    onPrimary = Color.White,
+                    primaryContainer = Color(0xFF312E81),
+                    onPrimaryContainer = Color(0xFFE0E7FF),
+                    secondary = Color(0xFF10B981),
+                    onSecondary = Color.White,
+                    secondaryContainer = Color(0xFF064E3B),
+                    onSecondaryContainer = Color(0xFFA7F3D0),
+                    background = Color(0xFF020617),
+                    surface = Color(0xFF0F172A),
+                    surfaceVariant = Color(0xFF1E293B),
+                    onSurface = Color(0xFFF8FAFC),
+                    onSurfaceVariant = Color(0xFF94A3B8)
+                )
+            ) {
+                MadrasaaIfaaIslaamaaApp()
+            }
         }
     }
 }
@@ -35,12 +59,15 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MadrasaaIfaaIslaamaaApp() {
-    var selectedRole by remember { mutableStateOf(UserRole.TEACHER) }
-    var currentBottomTab by remember { mutableStateOf("gradebook") }
+    var selectedRole by remember { mutableStateOf(UserRole.STUDENT) }
+    var currentBottomTab by remember { mutableStateOf("dashboard") }
+
+    // Emergency alert state
+    var emergencyAlert by remember { mutableStateOf<String?>(null) }
 
     // Seed mock students
     val students = remember {
-        listOf(
+        mutableStateListOf(
             Student("STU-101", "Sophia Chen", 10, "A", "10-A-14", "David & Elena Chen", "+1 (555) 234-8901", 97.2f, 3.92f, "Route 4B", "In Transit"),
             Student("STU-104", "Aisha Patel", 10, "A", "10-A-03", "Rajesh Patel", "+1 (555) 456-7890", 99.1f, 4.00f, "Route 4B", "In Transit"),
             Student("STU-107", "Fatima Zahra Noor", 10, "A", "10-A-09", "Tariq Noor", "+1 (555) 789-0123", 98.4f, 3.95f, "Route 2A", "Boarded"),
@@ -62,6 +89,46 @@ fun MadrasaaIfaaIslaamaaApp() {
         )
     }
 
+    // Seed mock subject grades for Sophia Chen
+    val grades = remember {
+        mutableStateListOf(
+            SubjectGrade("Quran Recitation & Tajweed", "QRN-10", "Ustaz Ahmad Al-Hadi", 98, "A+", 4.0f, "Masha'Allah, flawless recitation with immaculate ghunnah and makharij."),
+            SubjectGrade("Pre-Calculus Honors", "MTH-10", "Ustaz Dawud Ibrahim", 94, "A", 4.0f, "Excellent grasp of trigonometric identities and proof structures."),
+            SubjectGrade("Arabic Language & Nahw", "ARB-10", "Ustaza Fatima Zahra", 92, "A", 3.0f, "Very strong grammatical analysis and vocabulary retention."),
+            SubjectGrade("AP Biology & Lab", "SCI-10", "Dr. Evelyn Vance", 95, "A", 4.0f, "Exceptional cellular respiration lab prep and analytical rigor."),
+            SubjectGrade("Islamic History & Fiqh", "ISL-10", "Ustaz Bilal Nur", 96, "A", 3.0f, "High engagement in jurisprudence discussions and classical texts.")
+        )
+    }
+
+    // Seed mock assignments
+    val assignments = remember {
+        mutableStateListOf(
+            Assignment("ASN-01", "Surah Al-Kahf Ayah 1-30 Tajweed", "Quran Recitation", 10, "Ustaz Ahmad Al-Hadi", "2026-10-24", "pending", 50, null, "Record oral recitation focusing on ikhfaa and qalqalah rules.", "08:00 PM"),
+            Assignment("ASN-02", "Trigonometric Proof Problem Set", "Pre-Calculus", 10, "Ustaz Dawud Ibrahim", "2026-10-25", "pending", 40, null, "Complete textbook questions 14 through 28 on double-angle formulas.", "11:59 PM"),
+            Assignment("ASN-03", "Cellular Respiration Lab Synthesis", "AP Biology", 10, "Dr. Evelyn Vance", "2026-10-20", "submitted", 50, 48, "Write complete scientific lab report with graph data.", "11:59 PM"),
+            Assignment("ASN-04", "Arabic Verb Conjugation Drill", "Arabic Language", 10, "Ustaza Fatima Zahra", "2026-10-18", "submitted", 30, 29, "Conjugate 10 Form I verbs into past and present tenses.", "05:00 PM")
+        )
+    }
+
+    // Seed mock invoices
+    val invoices = remember {
+        mutableStateListOf(
+            FeeInvoice("INV-2026-001", "Sophia Chen", "Fall Semester 2026", 1450.00, "2026-11-15", false, "Tuition, Quranic Curriculum & Lab Supplies"),
+            FeeInvoice("INV-2026-002", "Sophia Chen", "Bus Transit Pass Term 1", 320.00, "2026-10-10", true, "Express Campus Bus Route 4B Door-to-Door", "REC-8921", "Apple Pay")
+        )
+    }
+
+    // Seed mock timetable
+    val timetable = remember {
+        listOf(
+            TimetableSlot("TS-1", "Monday", "08:00 - 09:15 AM", "Quran Recitation & Tajweed", "Ustaz Ahmad Al-Hadi", "Audio Lab 201"),
+            TimetableSlot("TS-2", "Monday", "09:30 - 10:45 AM", "Pre-Calculus Honors", "Ustaz Dawud Ibrahim", "Room 204"),
+            TimetableSlot("TS-3", "Monday", "11:00 - 12:15 PM", "Arabic Language & Grammar", "Ustaza Fatima Zahra", "Room 108"),
+            TimetableSlot("TS-4", "Monday", "01:00 - 02:15 PM", "AP Biology & Lab Session", "Dr. Evelyn Vance", "Science Lab 3"),
+            TimetableSlot("TS-5", "Monday", "02:30 - 03:30 PM", "Islamic History & Fiqh", "Ustaz Bilal Nur", "Lecture Hall A")
+        )
+    }
+
     // Seed mock multi-channel chat messages
     val chatMessages = remember {
         mutableStateListOf(
@@ -78,13 +145,18 @@ fun MadrasaaIfaaIslaamaaApp() {
             TopAppBar(
                 title = {
                     Column {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = "Madrasaa Ifaa Islaamaa",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            )
+                            Badge(containerColor = MaterialTheme.colorScheme.primaryContainer) {
+                                Text("Android", fontSize = 9.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                            }
+                        }
                         Text(
-                            text = "Madrasaa Ifaa Islaamaa",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 17.sp
-                        )
-                        Text(
-                            text = "K-12 School Management System",
+                            text = "K-12 School System • ${selectedRole.name}",
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -95,14 +167,14 @@ fun MadrasaaIfaaIslaamaaApp() {
                     AssistChip(
                         onClick = {
                             selectedRole = when (selectedRole) {
-                                UserRole.STUDENT -> UserRole.PARENT
-                                UserRole.PARENT -> UserRole.TEACHER
-                                UserRole.TEACHER -> UserRole.ADMIN
+                                UserRole.STUDENT -> UserRole.TEACHER
+                                UserRole.TEACHER -> UserRole.PARENT
+                                UserRole.PARENT -> UserRole.ADMIN
                                 UserRole.ADMIN -> UserRole.STUDENT
                             }
                             currentBottomTab = when (selectedRole) {
+                                UserRole.STUDENT -> "dashboard"
                                 UserRole.TEACHER -> "gradebook"
-                                UserRole.STUDENT -> "home"
                                 UserRole.PARENT -> "children"
                                 UserRole.ADMIN -> "dashboard"
                             }
@@ -121,6 +193,38 @@ fun MadrasaaIfaaIslaamaaApp() {
         bottomBar = {
             NavigationBar {
                 when (selectedRole) {
+                    UserRole.STUDENT -> {
+                        NavigationBarItem(
+                            selected = currentBottomTab == "dashboard",
+                            onClick = { currentBottomTab = "dashboard" },
+                            icon = { Icon(Icons.Default.Dashboard, contentDescription = "Dashboard") },
+                            label = { Text("Dashboard") }
+                        )
+                        NavigationBarItem(
+                            selected = currentBottomTab == "academics",
+                            onClick = { currentBottomTab = "academics" },
+                            icon = { Icon(Icons.Default.School, contentDescription = "Grades") },
+                            label = { Text("Grades") }
+                        )
+                        NavigationBarItem(
+                            selected = currentBottomTab == "chat",
+                            onClick = { currentBottomTab = "chat" },
+                            icon = { Icon(Icons.Default.Email, contentDescription = "Ask Teacher") },
+                            label = { Text("Ask Teacher") }
+                        )
+                        NavigationBarItem(
+                            selected = currentBottomTab == "schedule",
+                            onClick = { currentBottomTab = "schedule" },
+                            icon = { Icon(Icons.Default.Schedule, contentDescription = "Timetable") },
+                            label = { Text("Timetable") }
+                        )
+                        NavigationBarItem(
+                            selected = currentBottomTab == "idpass",
+                            onClick = { currentBottomTab = "idpass" },
+                            icon = { Icon(Icons.Default.QrCode, contentDescription = "ID Pass") },
+                            label = { Text("ID Pass") }
+                        )
+                    }
                     UserRole.TEACHER -> {
                         NavigationBarItem(
                             selected = currentBottomTab == "gradebook",
@@ -147,26 +251,6 @@ fun MadrasaaIfaaIslaamaaApp() {
                             label = { Text("Messages") }
                         )
                     }
-                    UserRole.STUDENT -> {
-                        NavigationBarItem(
-                            selected = currentBottomTab == "home",
-                            onClick = { currentBottomTab = "home" },
-                            icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-                            label = { Text("Home") }
-                        )
-                        NavigationBarItem(
-                            selected = currentBottomTab == "academics",
-                            onClick = { currentBottomTab = "academics" },
-                            icon = { Icon(Icons.Default.School, contentDescription = "Academics") },
-                            label = { Text("Grades") }
-                        )
-                        NavigationBarItem(
-                            selected = currentBottomTab == "chat",
-                            onClick = { currentBottomTab = "chat" },
-                            icon = { Icon(Icons.Default.Email, contentDescription = "Ask Teacher") },
-                            label = { Text("Ask Teacher") }
-                        )
-                    }
                     UserRole.PARENT -> {
                         NavigationBarItem(
                             selected = currentBottomTab == "children",
@@ -177,15 +261,21 @@ fun MadrasaaIfaaIslaamaaApp() {
                         NavigationBarItem(
                             selected = currentBottomTab == "fees",
                             onClick = { currentBottomTab = "fees" },
-                            icon = { Icon(Icons.Default.AttachMoney, contentDescription = "Fees") },
+                            icon = { Icon(Icons.Default.AttachMoney, contentDescription = "Tuition") },
                             label = { Text("Tuition") }
+                        )
+                        NavigationBarItem(
+                            selected = currentBottomTab == "chat",
+                            onClick = { currentBottomTab = "chat" },
+                            icon = { Icon(Icons.Default.Email, contentDescription = "Teacher") },
+                            label = { Text("Teacher") }
                         )
                     }
                     UserRole.ADMIN -> {
                         NavigationBarItem(
                             selected = currentBottomTab == "dashboard",
                             onClick = { currentBottomTab = "dashboard" },
-                            icon = { Icon(Icons.Default.Dashboard, contentDescription = "Dashboard") },
+                            icon = { Icon(Icons.Default.Dashboard, contentDescription = "KPIs") },
                             label = { Text("KPIs") }
                         )
                         NavigationBarItem(
@@ -205,21 +295,641 @@ fun MadrasaaIfaaIslaamaaApp() {
             }
         }
     ) { padding ->
-        Box(modifier = Modifier.padding(padding).fillMaxSize().padding(12.dp)) {
-            when (selectedRole) {
-                UserRole.TEACHER -> TeacherScreen(students.filter { it.grade == 10 }, teachers, currentBottomTab, chatMessages)
-                UserRole.STUDENT -> StudentScreen(students.first(), teachers, currentBottomTab, chatMessages)
-                UserRole.PARENT -> ParentScreen(students.first())
-                UserRole.ADMIN -> AdminScreen(students, teachers, currentBottomTab, chatMessages)
+        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+            // Emergency Alert Banner if Active
+            if (emergencyAlert != null) {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFDC2626))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp).fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Icon(Icons.Default.Warning, contentDescription = "Alert", tint = Color.White)
+                            Text(emergencyAlert ?: "", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                        IconButton(onClick = { emergencyAlert = null }) {
+                            Icon(Icons.Default.Close, contentDescription = "Dismiss", tint = Color.White)
+                        }
+                    }
+                }
+            }
+
+            Box(modifier = Modifier.fillMaxSize().padding(12.dp)) {
+                when (selectedRole) {
+                    UserRole.STUDENT -> StudentScreen(
+                        student = students.first(),
+                        teachers = teachers,
+                        grades = grades,
+                        assignments = assignments,
+                        timetable = timetable,
+                        currentBottomTab = currentBottomTab,
+                        chatMessages = chatMessages,
+                        onTabChange = { currentBottomTab = it }
+                    )
+                    UserRole.TEACHER -> TeacherScreen(
+                        students = students.filter { it.grade == 10 },
+                        teachers = teachers,
+                        assignments = assignments,
+                        currentBottomTab = currentBottomTab,
+                        chatMessages = chatMessages
+                    )
+                    UserRole.PARENT -> ParentScreen(
+                        student = students.first(),
+                        invoices = invoices,
+                        chatMessages = chatMessages,
+                        currentBottomTab = currentBottomTab
+                    )
+                    UserRole.ADMIN -> AdminScreen(
+                        students = students,
+                        teachers = teachers,
+                        currentBottomTab = currentBottomTab,
+                        chatMessages = chatMessages,
+                        onBroadcastAlert = { emergencyAlert = it }
+                    )
+                }
+            }
+        }
+    }
+}
+
+// =========================================================================
+// 1. STUDENT SCREEN & FULL STUDENT DASHBOARD
+// =========================================================================
+
+@Composable
+fun StudentScreen(
+    student: Student,
+    teachers: List<TeacherProfile>,
+    grades: List<SubjectGrade>,
+    assignments: MutableList<Assignment>,
+    timetable: List<TimetableSlot>,
+    currentBottomTab: String,
+    chatMessages: MutableList<ChatMessage>,
+    onTabChange: (String) -> Unit
+) {
+    when (currentBottomTab) {
+        "dashboard" -> StudentDashboardView(
+            student = student,
+            teachers = teachers,
+            grades = grades,
+            assignments = assignments,
+            chatMessages = chatMessages,
+            onNavigateToAcademics = { onTabChange("academics") },
+            onNavigateToChat = { onTabChange("chat") }
+        )
+        "academics" -> StudentAcademicsFullView(student, grades, assignments)
+        "chat" -> StudentChatView(student, teachers, chatMessages)
+        "schedule" -> StudentTimetableView(timetable)
+        "idpass" -> StudentIdPassView(student)
+        else -> StudentDashboardView(student, teachers, grades, assignments, chatMessages, { onTabChange("academics") }, { onTabChange("chat") })
+    }
+}
+
+/**
+ * Native Jetpack Compose equivalent of StudentDashboard component
+ */
+@Composable
+fun StudentDashboardView(
+    student: Student,
+    teachers: List<TeacherProfile>,
+    grades: List<SubjectGrade>,
+    assignments: MutableList<Assignment>,
+    chatMessages: MutableList<ChatMessage>,
+    onNavigateToAcademics: () -> Unit,
+    onNavigateToChat: () -> Unit
+) {
+    var assignmentFilter by remember { mutableStateOf("pending") }
+    var selectedTeacherIndex by remember { mutableStateOf(0) }
+    var quickChatInput by remember { mutableStateOf("") }
+    var actionToast by remember { mutableStateOf<String?>(null) }
+
+    val activeTeacher = teachers.getOrNull(selectedTeacherIndex) ?: teachers.first()
+    val pendingCount = assignments.count { it.status == "pending" }
+    val submittedCount = assignments.count { it.status != "pending" }
+    val avgScore = if (grades.isNotEmpty()) grades.map { it.score }.average().toInt() else 95
+
+    val filteredAssignments = when (assignmentFilter) {
+        "pending" -> assignments.filter { it.status == "pending" }
+        "submitted" -> assignments.filter { it.status != "pending" }
+        else -> assignments
+    }
+
+    LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        // Feedback Toast
+        if (actionToast != null) {
+            item {
+                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF065F46))) {
+                    Text(
+                        actionToast ?: "",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(10.dp)
+                    )
+                }
+            }
+        }
+
+        // Student Profile Header & KPI Strip
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(student.name, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = Color.White)
+                            Text("Grade ${student.grade}-${student.section} • Roll #${student.rollNumber}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        }
+                        SuggestionChip(
+                            onClick = {},
+                            label = { Text("Honors Roster", fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                        )
+                    }
+
+                    Divider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
+
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Column {
+                            Text("Cumulative GPA", fontSize = 10.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                            Text("${student.currentGpa} / 4.0", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+                        Column {
+                            Text("Attendance", fontSize = 10.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                            Text("${student.attendanceRate}%", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF34D399))
+                        }
+                        Column {
+                            Text("Avg Score", fontSize = 10.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                            Text("$avgScore%", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+                    }
+                }
+            }
+        }
+
+        // SECTION 1: CURRENT ASSIGNMENTS SUMMARY
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Icon(Icons.Default.Assignment, contentDescription = "Homework", tint = MaterialTheme.colorScheme.primary)
+                            Text("Current Assignments", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
+                        TextButton(onClick = onNavigateToAcademics) {
+                            Text("View All", fontSize = 11.sp)
+                        }
+                    }
+
+                    // Segmented Filter
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        FilterChip(
+                            selected = assignmentFilter == "pending",
+                            onClick = { assignmentFilter = "pending" },
+                            label = { Text("Pending ($pendingCount)", fontSize = 11.sp) },
+                            modifier = Modifier.weight(1f)
+                        )
+                        FilterChip(
+                            selected = assignmentFilter == "submitted",
+                            onClick = { assignmentFilter = "submitted" },
+                            label = { Text("Completed ($submittedCount)", fontSize = 11.sp) },
+                            modifier = Modifier.weight(1f)
+                        )
+                        FilterChip(
+                            selected = assignmentFilter == "all",
+                            onClick = { assignmentFilter = "all" },
+                            label = { Text("All (${assignments.size})", fontSize = 11.sp) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    // Homework Cards
+                    filteredAssignments.take(3).forEach { asn ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text(asn.subject, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                        Text(asn.title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                    }
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Text("${asn.totalScore} pts", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        Text(
+                                            if (asn.status == "pending") "Due: ${asn.dueDate}" else "Graded",
+                                            fontSize = 10.sp,
+                                            color = if (asn.status == "pending") Color(0xFFF59E0B) else Color(0xFF10B981)
+                                        )
+                                    }
+                                }
+
+                                if (asn.status == "pending") {
+                                    Button(
+                                        onClick = {
+                                            val idx = assignments.indexOfFirst { it.id == asn.id }
+                                            if (idx != -1) {
+                                                assignments[idx] = asn.copy(status = "submitted", obtainedScore = asn.totalScore)
+                                                actionToast = "✓ Turned in '${asn.title}' to teacher gradebook!"
+                                            }
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        contentPadding = PaddingValues(vertical = 4.dp)
+                                    ) {
+                                        Icon(Icons.Default.Upload, contentDescription = "Turn In", modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Turn In Work", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // SECTION 2: RECENT SUBJECT GRADES
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Icon(Icons.Default.School, contentDescription = "Grades", tint = Color(0xFF10B981))
+                            Text("Recent Subject Grades", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
+                        TextButton(onClick = onNavigateToAcademics) {
+                            Text("Full Report", fontSize = 11.sp)
+                        }
+                    }
+
+                    grades.take(3).forEach { gr ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text(gr.subject, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                        Text("${gr.teacher} • ${gr.code}", fontSize = 10.sp, color = Color.Gray)
+                                    }
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Text("${gr.score}%", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+                                        Badge(containerColor = MaterialTheme.colorScheme.primaryContainer) {
+                                            Text(gr.letterGrade, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                                        }
+                                    }
+                                }
+
+                                // Linear Progress Indicator for Grade
+                                LinearProgressIndicator(
+                                    progress = { gr.score / 100f },
+                                    modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
+                                    color = if (gr.score >= 90) Color(0xFF10B981) else Color(0xFF6366F1)
+                                )
+
+                                Text(
+                                    text = "“${gr.comments}”",
+                                    fontSize = 11.sp,
+                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // SECTION 3: QUICK-CHAT INTERFACE WITH TEACHERS
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Icon(Icons.Default.Email, contentDescription = "Chat", tint = Color(0xFFF59E0B))
+                            Text("Quick Teacher Q&A", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
+                        TextButton(onClick = onNavigateToChat) {
+                            Text("Full Chat", fontSize = 11.sp)
+                        }
+                    }
+
+                    // Teacher Selector
+                    Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        teachers.forEachIndexed { idx, tch ->
+                            FilterChip(
+                                selected = selectedTeacherIndex == idx,
+                                onClick = { selectedTeacherIndex = idx },
+                                label = { Text("${tch.name.split(" ")[0]} (${tch.subjectCode})", fontSize = 11.sp) }
+                            )
+                        }
+                    }
+
+                    // Chat Stream snippet
+                    val filteredMessages = chatMessages.filter { it.channel == ChatChannel.TEACHER_STUDENT }
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Column(modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                "Live thread with ${activeTeacher.name}:",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+
+                            filteredMessages.takeLast(2).forEach { msg ->
+                                val isStudent = msg.senderRole == UserRole.STUDENT
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalAlignment = if (isStudent) Alignment.End else Alignment.Start
+                                ) {
+                                    Card(
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = if (isStudent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                                        )
+                                    ) {
+                                        Text(
+                                            text = msg.text,
+                                            fontSize = 11.sp,
+                                            color = if (isStudent) Color.White else MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.padding(8.dp)
+                                        )
+                                    }
+                                    Text(msg.timestamp, fontSize = 9.sp, color = Color.Gray)
+                                }
+                            }
+
+                            // Quick Inquiry Chips
+                            Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                SuggestionChip(
+                                    onClick = {
+                                        chatMessages.add(
+                                            ChatMessage(
+                                                id = "MSG-${System.currentTimeMillis()}",
+                                                senderRole = UserRole.STUDENT,
+                                                senderName = student.name,
+                                                text = "Assalamu alaikum teacher! Could you clarify the homework instructions?",
+                                                timestamp = "Just now",
+                                                channel = ChatChannel.TEACHER_STUDENT,
+                                                recipientName = activeTeacher.name,
+                                                teacherId = activeTeacher.id,
+                                                studentId = student.id
+                                            )
+                                        )
+                                        actionToast = "Message sent to ${activeTeacher.name}!"
+                                    },
+                                    label = { Text("📖 Clarify homework", fontSize = 10.sp) }
+                                )
+                                SuggestionChip(
+                                    onClick = {
+                                        chatMessages.add(
+                                            ChatMessage(
+                                                id = "MSG-${System.currentTimeMillis()}",
+                                                senderRole = UserRole.STUDENT,
+                                                senderName = student.name,
+                                                text = "Can I review my recent grade comments with you?",
+                                                timestamp = "Just now",
+                                                channel = ChatChannel.TEACHER_STUDENT,
+                                                recipientName = activeTeacher.name,
+                                                teacherId = activeTeacher.id,
+                                                studentId = student.id
+                                            )
+                                        )
+                                        actionToast = "Message sent to ${activeTeacher.name}!"
+                                    },
+                                    label = { Text("📝 Review grade", fontSize = 10.sp) }
+                                )
+                            }
+
+                            // Message Input
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                OutlinedTextField(
+                                    value = quickChatInput,
+                                    onValueChange = { quickChatInput = it },
+                                    placeholder = { Text("Ask a question...", fontSize = 11.sp) },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                IconButton(
+                                    onClick = {
+                                        if (quickChatInput.isNotBlank()) {
+                                            chatMessages.add(
+                                                ChatMessage(
+                                                    id = "MSG-${System.currentTimeMillis()}",
+                                                    senderRole = UserRole.STUDENT,
+                                                    senderName = student.name,
+                                                    text = quickChatInput,
+                                                    timestamp = "Just now",
+                                                    channel = ChatChannel.TEACHER_STUDENT,
+                                                    recipientName = activeTeacher.name,
+                                                    teacherId = activeTeacher.id,
+                                                    studentId = student.id
+                                                )
+                                            )
+                                            quickChatInput = ""
+                                            actionToast = "Message sent to ${activeTeacher.name}!"
+                                        }
+                                    }
+                                ) {
+                                    Icon(Icons.Default.Send, contentDescription = "Send", tint = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
+fun StudentAcademicsFullView(
+    student: Student,
+    grades: List<SubjectGrade>,
+    assignments: List<Assignment>
+) {
+    LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Text("Fall Term Gradebook & Transcript", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                    Text("Official Record • Grade ${student.grade}-${student.section}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Cumulative GPA: ${student.currentGpa} / 4.0", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
+            }
+        }
+
+        item {
+            Text("Enrolled Subject Standings", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        }
+
+        items(grades) { gr ->
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(gr.subject, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text("Educator: ${gr.teacher} • ${gr.credits} Credits", fontSize = 11.sp, color = Color.Gray)
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("${gr.score}%", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Badge {
+                                Text(gr.letterGrade, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                    Text("“${gr.comments}”", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun StudentTimetableView(timetable: List<TimetableSlot>) {
+    LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        item {
+            Text("Daily Class Schedule (Bell Schedule A)", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+        }
+        items(timetable) { slot ->
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(slot.time, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text(slot.subject, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text(slot.teacher, fontSize = 11.sp, color = Color.Gray)
+                    }
+                    SuggestionChip(
+                        onClick = {},
+                        label = { Text(slot.room, fontSize = 11.sp, fontWeight = FontWeight.SemiBold) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun StudentIdPassView(student: Student) {
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Madrasaa Ifaa Islaamaa", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Badge(containerColor = Color(0xFF10B981)) {
+                        Text("ACTIVE PASS", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier.size(64.dp).background(MaterialTheme.colorScheme.surface, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Person, contentDescription = "Student", modifier = Modifier.size(36.dp))
+                    }
+                    Column {
+                        Text(student.name, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, color = Color.White)
+                        Text("Grade ${student.grade}-${student.section} • Roll #${student.rollNumber}", fontSize = 12.sp)
+                        Text("DOB: ${student.dob} • Blood: ${student.bloodGroup}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    }
+                }
+
+                Divider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("NFC RFID TOKEN", fontSize = 9.sp, color = Color.LightGray)
+                        Text("STU-2026-894-CC", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                    Icon(Icons.Default.QrCode, contentDescription = "QR Code", modifier = Modifier.size(36.dp))
+                }
+            }
+        }
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Campus Transit & Emergency", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Text("Bus Route: ${student.busRoute} (${student.busStatus})", fontSize = 12.sp)
+                Text("Parent Hotline: ${student.parentPhone}", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+            }
+        }
+    }
+}
+
+// =========================================================================
+// 2. TEACHER SCREEN: SCORE ENTRY, MASTER LEDGER, ATTENDANCE & CHAT
+// =========================================================================
+
+@Composable
 fun TeacherScreen(
     students: List<Student>,
     teachers: List<TeacherProfile>,
+    assignments: MutableList<Assignment>,
     currentBottomTab: String = "gradebook",
     chatMessages: MutableList<ChatMessage> = mutableListOf()
 ) {
@@ -228,7 +938,7 @@ fun TeacherScreen(
         return
     }
 
-    var teacherSubTab by remember { mutableStateOf("entry") } // "entry" vs "master_ledger" vs "attendance"
+    var teacherSubTab by remember { mutableStateOf("entry") }
     var selectedTeacherIndex by remember { mutableStateOf(0) }
     val activeTeacher = teachers[selectedTeacherIndex]
 
@@ -429,7 +1139,7 @@ fun TeacherScreen(
             }
         }
 
-        // VIEW 2: MASTER CONSOLIDATED LEDGER (ALL TEACHERS' SCORES AT ONE PLACE)
+        // VIEW 2: MASTER CONSOLIDATED LEDGER
         if (teacherSubTab == "master_ledger") {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -444,7 +1154,6 @@ fun TeacherScreen(
 
             Text("Class Roster Ranked by Aggregate Score", fontWeight = FontWeight.Bold, fontSize = 13.sp)
 
-            // Calculate aggregate across all teachers for each student
             val rankedStudents = students.map { st ->
                 val subs = scoreMap[st.id] ?: emptyMap()
                 var sumMarks = 0
@@ -531,90 +1240,150 @@ fun ScoreComponentBox(label: String, score: Int, onClick: () -> Unit) {
     }
 }
 
+// =========================================================================
+// 3. PARENT SCREEN: BUS TRACKER, TUITION PAYMENTS, TEACHER CONTACT
+// =========================================================================
+
 @Composable
-fun StudentScreen(
+fun ParentScreen(
     student: Student,
-    teachers: List<TeacherProfile> = emptyList(),
-    currentBottomTab: String = "home",
-    chatMessages: MutableList<ChatMessage> = mutableListOf()
+    invoices: MutableList<FeeInvoice>,
+    chatMessages: MutableList<ChatMessage>,
+    currentBottomTab: String
 ) {
-    if (currentBottomTab == "chat") {
-        StudentChatView(student, teachers, chatMessages)
-        return
-    }
+    var paidToast by remember { mutableStateOf<String?>(null) }
 
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(student.name, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                Text("Grade ${student.grade}-${student.section} • Roll #${student.rollNumber}", fontSize = 13.sp)
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    Text("GPA: ${student.currentGpa} / 4.0", fontWeight = FontWeight.SemiBold)
-                    Text("Attendance: ${student.attendanceRate}%", fontWeight = FontWeight.SemiBold, color = Color(0xFF2E7D32))
-                }
+        if (paidToast != null) {
+            Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF065F46))) {
+                Text(paidToast ?: "", color = Color.White, fontSize = 12.sp, modifier = Modifier.padding(10.dp))
             }
         }
 
-        Text("Today's Quran & Academic Classes", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text("Quran Recitation & Tajweed • Room 302", fontWeight = FontWeight.SemiBold)
-                Text("08:00 - 09:15 AM • Ustaz Ahmad Al-Hadi", fontSize = 12.sp, color = Color.Gray)
-            }
-        }
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text("Arabic Grammar (Nahw) • Room 204", fontWeight = FontWeight.SemiBold)
-                Text("09:30 - 10:45 AM • Ustaza Fatima Zahra", fontSize = 12.sp, color = Color.Gray)
-            }
-        }
-    }
-}
-
-@Composable
-fun ParentScreen(student: Student) {
-    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Guardian Portal: David & Elena Chen", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Text("Student: ${student.name} (Grade ${student.grade}-${student.section})", fontSize = 13.sp, color = Color.Gray)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("School Bus: ${student.busRoute} (${student.busStatus})", fontSize = 13.sp)
-                Text("Estimated Arrival: 4 mins away", color = Color(0xFFF57C00), fontWeight = FontWeight.Bold)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(Icons.Default.DirectionsBus, contentDescription = "Bus", tint = Color(0xFFF59E0B))
+                    Text("School Bus: ${student.busRoute} (${student.busStatus})", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                }
+                Text("Estimated Arrival: 4 mins away", color = Color(0xFFF57C00), fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
         }
 
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("Madrasaa Term Tuition Invoice", fontWeight = FontWeight.Bold)
-                Text("Amount Due: $1,450.00", fontSize = 18.sp, color = MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = { /* Pay */ }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Pay with 1-Tap (Google Pay)")
+        Text("Madrasaa Tuition & Fee Invoices", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        invoices.forEach { inv ->
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(inv.term, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text(inv.description, fontSize = 11.sp, color = Color.Gray)
+                        }
+                        Text("$${"%.2f".format(inv.amount)}", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
+                    }
+
+                    if (!inv.isPaid) {
+                        Button(
+                            onClick = {
+                                val idx = invoices.indexOfFirst { it.id == inv.id }
+                                if (idx != -1) {
+                                    invoices[idx] = inv.copy(isPaid = true, receiptNumber = "REC-2026-9021", paymentMethod = "Google Pay (Verified)")
+                                    paidToast = "✓ Paid $${inv.amount} via Google Pay! Receipt generated."
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Pay with 1-Tap (Google Pay)")
+                        }
+                    } else {
+                        Badge(containerColor = Color(0xFF10B981)) {
+                            Text("PAID • ${inv.paymentMethod ?: "Processed"}", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
             }
         }
     }
 }
 
+// =========================================================================
+// 4. ADMIN SCREEN: KPIS, EMERGENCY BROADCASTS, ROSTER
+// =========================================================================
+
 @Composable
 fun AdminScreen(
     students: List<Student>,
-    teachers: List<TeacherProfile> = emptyList(),
+    teachers: List<TeacherProfile>,
     currentBottomTab: String = "dashboard",
-    chatMessages: MutableList<ChatMessage> = mutableListOf()
+    chatMessages: MutableList<ChatMessage> = mutableListOf(),
+    onBroadcastAlert: (String) -> Unit
 ) {
     if (currentBottomTab == "chat") {
         AdminChatView(teachers, chatMessages)
         return
     }
 
+    var broadcastText by remember { mutableStateOf("") }
+    var showDialog by remember { mutableStateOf(false) }
+
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Principal & Administrator Command", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Principal & Directorate Command", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Button(
+                onClick = { showDialog = true },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626))
+            ) {
+                Icon(Icons.Default.Warning, contentDescription = "Alert", modifier = Modifier.size(14.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Emergency Alert", fontSize = 11.sp)
+            }
+        }
+
+        if (showDialog) {
+            AlertDialog(
+                onDismissRequest = { showDialog = false },
+                title = { Text("Campus Emergency Broadcast") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Broadcast priority notification across all student, parent, and faculty devices:")
+                        OutlinedTextField(
+                            value = broadcastText,
+                            onValueChange = { broadcastText = it },
+                            placeholder = { Text("e.g. Inclement weather protocol in effect...") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            if (broadcastText.isNotBlank()) {
+                                onBroadcastAlert("URGENT NOTICE: $broadcastText")
+                                broadcastText = ""
+                                showDialog = false
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626))
+                    ) {
+                        Text("Broadcast Now")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDialog = false }) { Text("Cancel") }
+                }
+            )
+        }
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             Card(modifier = Modifier.weight(1f)) {
@@ -629,9 +1398,15 @@ fun AdminScreen(
                     Text("96.8%", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
                 }
             }
+            Card(modifier = Modifier.weight(1f)) {
+                Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterVertically) {
+                    Text("Active Faculty", fontSize = 11.sp, color = Color.Gray)
+                    Text("42", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                }
+            }
         }
 
-        Text("Madrasaa Ifaa Islaamaa Roster (Grades 1-12)", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+        Text("Madrasaa Ifaa Islaamaa Student Roster", fontWeight = FontWeight.Bold, fontSize = 14.sp)
         LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.weight(1f)) {
             items(students) { st ->
                 Card(modifier = Modifier.fillMaxWidth()) {
@@ -642,11 +1417,12 @@ fun AdminScreen(
                     ) {
                         Column {
                             Text(st.name, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                            Text("Grade ${st.grade}-${st.section} • GPA: ${st.currentGpa}", fontSize = 12.sp, color = Color.Gray)
+                            Text("Grade ${st.grade}-${st.section} • Roll #${st.rollNumber} • GPA: ${st.currentGpa}", fontSize = 12.sp, color = Color.Gray)
                         }
-                        TextButton(onClick = { }) {
-                            Text("Master Ledger", fontSize = 11.sp)
-                        }
+                        SuggestionChip(
+                            onClick = {},
+                            label = { Text("Active", fontSize = 10.sp) }
+                        )
                     }
                 }
             }
@@ -654,7 +1430,9 @@ fun AdminScreen(
     }
 }
 
-// ----------------- NATIVE COMPOSE CHAT VIEWS -----------------
+// =========================================================================
+// 5. NATIVE COMPOSE CHAT VIEWS
+// =========================================================================
 
 @Composable
 fun TeacherChatView(
@@ -662,7 +1440,7 @@ fun TeacherChatView(
     teachers: List<TeacherProfile>,
     chatMessages: MutableList<ChatMessage>
 ) {
-    var channelMode by remember { mutableStateOf("student") } // "student" or "admin"
+    var channelMode by remember { mutableStateOf("student") }
     var selectedStudentId by remember { mutableStateOf(students.firstOrNull()?.id ?: "") }
     var chatInput by remember { mutableStateOf("") }
     val activeStudent = students.find { it.id == selectedStudentId } ?: students.firstOrNull()
@@ -670,7 +1448,6 @@ fun TeacherChatView(
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Teacher Communication Center", fontWeight = FontWeight.Bold, fontSize = 16.sp)
 
-        // Sub-tabs: Students vs Administration
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
                 onClick = { channelMode = "student" },
@@ -703,7 +1480,6 @@ fun TeacherChatView(
         }
 
         if (channelMode == "student") {
-            // Student Selector
             Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 students.forEach { st ->
                     FilterChip(
@@ -734,7 +1510,6 @@ fun TeacherChatView(
                 }
             }
 
-            // Input Row
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = chatInput,
@@ -766,17 +1541,6 @@ fun TeacherChatView(
                 }
             }
         } else {
-            // Admin Mode
-            Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
-                Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Default.AccountBalance, contentDescription = "Principal")
-                    Column {
-                        Text("Office of the Principal", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        Text("Principal Ustaz Ibrahim • Academic Directorate", fontSize = 11.sp, color = Color.DarkGray)
-                    }
-                }
-            }
-
             val filtered = chatMessages.filter { it.channel == ChatChannel.TEACHER_ADMIN }
 
             LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -801,7 +1565,7 @@ fun TeacherChatView(
                 OutlinedTextField(
                     value = chatInput,
                     onValueChange = { chatInput = it },
-                    placeholder = { Text("Message Principal / Directorate...", fontSize = 12.sp) },
+                    placeholder = { Text("Message Principal...", fontSize = 12.sp) },
                     modifier = Modifier.weight(1f)
                 )
                 Button(
@@ -843,7 +1607,6 @@ fun StudentChatView(
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Ask Subject Teacher", fontWeight = FontWeight.Bold, fontSize = 16.sp)
 
-        // Teacher pills
         Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             teachers.forEachIndexed { idx, tch ->
                 FilterChip(
@@ -919,7 +1682,6 @@ fun AdminChatView(
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Principal Direct Comms with Faculty", fontWeight = FontWeight.Bold, fontSize = 16.sp)
 
-        // Teacher pills
         Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             teachers.forEachIndexed { idx, tch ->
                 FilterChip(

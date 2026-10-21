@@ -58,13 +58,34 @@ An end-to-end, production-grade K-12 School Management System & Mobile Suite for
 
 ## 🛠️ Technology Stack
 
-* **Frontend**: React 19, TypeScript, Vite 8, Tailwind CSS v4, Lucide Icons, Motion (Framer Motion)
-* **Fonts**: Outfit (Display headings), Plus Jakarta Sans (UI & body), JetBrains Mono (Telemetry & hashes)
-* **Architecture**: Clean Architecture + MVVM, Repository Pattern, Offline-First caching
+* **Web Suite**: React 19, TypeScript, Vite, Tailwind CSS v4, Lucide Icons
+* **Native Android App**: Kotlin 2.0, Jetpack Compose (Material 3), Gradle (Kotlin DSL), Android SDK 35
+* **Architecture**: Clean Architecture + MVVM, Repository Pattern, Multi-Channel Communications
 
 ---
 
-## 🚀 Getting Started
+## 📱 Native Android Studio Project (Kotlin)
+
+The complete native Android app lives in the `/android` directory:
+
+```bash
+# Open in Android Studio:
+# File -> Open -> Select the 'android' folder
+
+# Or build the debug APK via Gradle:
+cd android
+./gradlew assembleDebug
+```
+
+Features included in native Kotlin & Jetpack Compose:
+1. **Student Dashboard**: Assignments turn-in, recent grades & progress bars, direct teacher Q&A quick-chat, timetable, and digital NFC ID pass.
+2. **Teacher Gradebook**: Individual component entry (Assignment, Quiz, Midterm, Final Exam) and consolidated Master Ledger across all 6 teachers.
+3. **Parent Portal**: Real-time bus tracking and 1-tap Google Pay tuition settlement.
+4. **Admin Command**: Emergency broadcast alerts, campus KPIs, and direct staff communication.
+
+---
+
+## 🚀 Web Getting Started
 
 ```bash
 # 1. Install dependencies
@@ -81,3 +102,4 @@ npm run build
 
 ## 📜 License
 Apache-2.0 License. Built for **Madrasaa Ifaa Islaamaa**.
+

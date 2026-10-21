@@ -325,7 +325,9 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({
             </div>
 
             <div className="flex-1 space-y-2.5 overflow-y-auto pr-1">
-              {chatMessages.map((msg) => {
+              {chatMessages
+                .filter((msg) => !msg.channel || msg.channel === 'parent_teacher')
+                .map((msg) => {
                 const isParent = msg.senderRole === 'parent';
                 return (
                   <div key={msg.id} className={`flex flex-col ${isParent ? 'items-end' : 'items-start'}`}>

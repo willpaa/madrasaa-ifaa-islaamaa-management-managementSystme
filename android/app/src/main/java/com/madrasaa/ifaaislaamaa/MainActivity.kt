@@ -62,6 +62,17 @@ fun MadrasaaIfaaIslaamaaApp() {
         )
     }
 
+    // Seed mock multi-channel chat messages
+    val chatMessages = remember {
+        mutableStateListOf(
+            ChatMessage("MSG-01", UserRole.TEACHER, "Ustaz Ahmad Al-Hadi", "Wa alaikum assalam Sophia! Remember to hold the ghunnah for 2 counts on Ayah 22.", "10:28 AM", ChatChannel.TEACHER_STUDENT, "Sophia Chen", "TCH-01", "STU-101"),
+            ChatMessage("MSG-02", UserRole.STUDENT, "Sophia Chen", "Assalamu alaikum Ustaz Ahmad! For Surah Al-Kahf recitation homework, do we apply ikhfaa on the noon sakinah?", "10:15 AM", ChatChannel.TEACHER_STUDENT, "Ustaz Ahmad Al-Hadi", "TCH-01", "STU-101"),
+            ChatMessage("MSG-03", UserRole.ADMIN, "Principal Ustaz Ibrahim", "Assalamu alaikum Ustaz Ahmad. Please verify room allocations for the oral Tajweed exam.", "09:10 AM", ChatChannel.TEACHER_ADMIN, "Ustaz Ahmad Al-Hadi", "TCH-01"),
+            ChatMessage("MSG-04", UserRole.TEACHER, "Ustaz Ahmad Al-Hadi", "Wa alaikum assalam Sheikh. Room 104 and Audio Lab 2 are confirmed. Rubrics are staged.", "09:32 AM", ChatChannel.TEACHER_ADMIN, "Principal Ustaz Ibrahim", "TCH-01"),
+            ChatMessage("MSG-05", UserRole.ADMIN, "Principal Ustaz Ibrahim", "Dr. Vance, science laboratory glassware order has arrived at the bursar storage.", "Yesterday 1:15 PM", ChatChannel.TEACHER_ADMIN, "Dr. Evelyn Vance", "TCH-05")
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -88,6 +99,12 @@ fun MadrasaaIfaaIslaamaaApp() {
                                 UserRole.PARENT -> UserRole.TEACHER
                                 UserRole.TEACHER -> UserRole.ADMIN
                                 UserRole.ADMIN -> UserRole.STUDENT
+                            }
+                            currentBottomTab = when (selectedRole) {
+                                UserRole.TEACHER -> "gradebook"
+                                UserRole.STUDENT -> "home"
+                                UserRole.PARENT -> "children"
+                                UserRole.ADMIN -> "dashboard"
                             }
                         },
                         label = { Text(selectedRole.name, fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
@@ -123,6 +140,12 @@ fun MadrasaaIfaaIslaamaaApp() {
                             icon = { Icon(Icons.Default.Assignment, contentDescription = "Homework") },
                             label = { Text("Homework") }
                         )
+                        NavigationBarItem(
+                            selected = currentBottomTab == "chat",
+                            onClick = { currentBottomTab = "chat" },
+                            icon = { Icon(Icons.Default.Email, contentDescription = "Messages") },
+                            label = { Text("Messages") }
+                        )
                     }
                     UserRole.STUDENT -> {
                         NavigationBarItem(
@@ -136,6 +159,12 @@ fun MadrasaaIfaaIslaamaaApp() {
                             onClick = { currentBottomTab = "academics" },
                             icon = { Icon(Icons.Default.School, contentDescription = "Academics") },
                             label = { Text("Grades") }
+                        )
+                        NavigationBarItem(
+                            selected = currentBottomTab == "chat",
+                            onClick = { currentBottomTab = "chat" },
+                            icon = { Icon(Icons.Default.Email, contentDescription = "Ask Teacher") },
+                            label = { Text("Ask Teacher") }
                         )
                     }
                     UserRole.PARENT -> {
@@ -165,6 +194,12 @@ fun MadrasaaIfaaIslaamaaApp() {
                             icon = { Icon(Icons.Default.Print, contentDescription = "Master Ledger") },
                             label = { Text("Master Ledger") }
                         )
+                        NavigationBarItem(
+                            selected = currentBottomTab == "chat",
+                            onClick = { currentBottomTab = "chat" },
+                            icon = { Icon(Icons.Default.Email, contentDescription = "Staff Chat") },
+                            label = { Text("Staff Chat") }
+                        )
                     }
                 }
             }
@@ -172,17 +207,27 @@ fun MadrasaaIfaaIslaamaaApp() {
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize().padding(12.dp)) {
             when (selectedRole) {
-                UserRole.TEACHER -> TeacherScreen(students.filter { it.grade == 10 }, teachers)
-                UserRole.STUDENT -> StudentScreen(students.first())
+                UserRole.TEACHER -> TeacherScreen(students.filter { it.grade == 10 }, teachers, currentBottomTab, chatMessages)
+                UserRole.STUDENT -> StudentScreen(students.first(), teachers, currentBottomTab, chatMessages)
                 UserRole.PARENT -> ParentScreen(students.first())
-                UserRole.ADMIN -> AdminScreen(students)
+                UserRole.ADMIN -> AdminScreen(students, teachers, currentBottomTab, chatMessages)
             }
         }
     }
 }
 
 @Composable
-fun TeacherScreen(students: List<Student>, teachers: List<TeacherProfile>) {
+fun TeacherScreen(
+    students: List<Student>,
+    teachers: List<TeacherProfile>,
+    currentBottomTab: String = "gradebook",
+    chatMessages: MutableList<ChatMessage> = mutableListOf()
+) {
+    if (currentBottomTab == "chat") {
+        TeacherChatView(students, teachers, chatMessages)
+        return
+    }
+
     var teacherSubTab by remember { mutableStateOf("entry") } // "entry" vs "master_ledger" vs "attendance"
     var selectedTeacherIndex by remember { mutableStateOf(0) }
     val activeTeacher = teachers[selectedTeacherIndex]
@@ -487,7 +532,17 @@ fun ScoreComponentBox(label: String, score: Int, onClick: () -> Unit) {
 }
 
 @Composable
-fun StudentScreen(student: Student) {
+fun StudentScreen(
+    student: Student,
+    teachers: List<TeacherProfile> = emptyList(),
+    currentBottomTab: String = "home",
+    chatMessages: MutableList<ChatMessage> = mutableListOf()
+) {
+    if (currentBottomTab == "chat") {
+        StudentChatView(student, teachers, chatMessages)
+        return
+    }
+
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -547,7 +602,17 @@ fun ParentScreen(student: Student) {
 }
 
 @Composable
-fun AdminScreen(students: List<Student>) {
+fun AdminScreen(
+    students: List<Student>,
+    teachers: List<TeacherProfile> = emptyList(),
+    currentBottomTab: String = "dashboard",
+    chatMessages: MutableList<ChatMessage> = mutableListOf()
+) {
+    if (currentBottomTab == "chat") {
+        AdminChatView(teachers, chatMessages)
+        return
+    }
+
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Principal & Administrator Command", fontWeight = FontWeight.Bold, fontSize = 18.sp)
 
@@ -584,6 +649,334 @@ fun AdminScreen(students: List<Student>) {
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+// ----------------- NATIVE COMPOSE CHAT VIEWS -----------------
+
+@Composable
+fun TeacherChatView(
+    students: List<Student>,
+    teachers: List<TeacherProfile>,
+    chatMessages: MutableList<ChatMessage>
+) {
+    var channelMode by remember { mutableStateOf("student") } // "student" or "admin"
+    var selectedStudentId by remember { mutableStateOf(students.firstOrNull()?.id ?: "") }
+    var chatInput by remember { mutableStateOf("") }
+    val activeStudent = students.find { it.id == selectedStudentId } ?: students.firstOrNull()
+
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Teacher Communication Center", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+
+        // Sub-tabs: Students vs Administration
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(
+                onClick = { channelMode = "student" },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (channelMode == "student") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Text(
+                    "Student Inquiries",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (channelMode == "student") MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Button(
+                onClick = { channelMode = "admin" },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (channelMode == "admin") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Text(
+                    "Admin / Principal",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (channelMode == "admin") MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        if (channelMode == "student") {
+            // Student Selector
+            Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                students.forEach { st ->
+                    FilterChip(
+                        selected = selectedStudentId == st.id,
+                        onClick = { selectedStudentId = st.id },
+                        label = { Text("${st.name.split(" ")[0]} (#${st.rollNumber})", fontSize = 11.sp) }
+                    )
+                }
+            }
+
+            val filtered = chatMessages.filter { it.channel == ChatChannel.TEACHER_STUDENT }
+
+            LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(filtered) { msg ->
+                    val isTeacher = msg.senderRole == UserRole.TEACHER
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(start = if (isTeacher) 40.dp else 0.dp, end = if (isTeacher) 0.dp else 40.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isTeacher) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Text(msg.senderName, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            Text(msg.text, fontSize = 12.sp)
+                            Text(msg.timestamp, fontSize = 9.sp, color = Color.Gray, modifier = Modifier.align(Alignment.End))
+                        }
+                    }
+                }
+            }
+
+            // Input Row
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = chatInput,
+                    onValueChange = { chatInput = it },
+                    placeholder = { Text("Reply to student...", fontSize = 12.sp) },
+                    modifier = Modifier.weight(1f)
+                )
+                Button(
+                    onClick = {
+                        if (chatInput.isNotBlank()) {
+                            chatMessages.add(
+                                ChatMessage(
+                                    id = "MSG-${System.currentTimeMillis()}",
+                                    senderRole = UserRole.TEACHER,
+                                    senderName = "Ustaz Ahmad Al-Hadi",
+                                    text = chatInput,
+                                    timestamp = "Just now",
+                                    channel = ChatChannel.TEACHER_STUDENT,
+                                    recipientName = activeStudent?.name ?: "Student",
+                                    teacherId = "TCH-01",
+                                    studentId = activeStudent?.id ?: ""
+                                )
+                            )
+                            chatInput = ""
+                        }
+                    }
+                ) {
+                    Text("Send")
+                }
+            }
+        } else {
+            // Admin Mode
+            Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
+                Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.AccountBalance, contentDescription = "Principal")
+                    Column {
+                        Text("Office of the Principal", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("Principal Ustaz Ibrahim • Academic Directorate", fontSize = 11.sp, color = Color.DarkGray)
+                    }
+                }
+            }
+
+            val filtered = chatMessages.filter { it.channel == ChatChannel.TEACHER_ADMIN }
+
+            LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(filtered) { msg ->
+                    val isTeacher = msg.senderRole == UserRole.TEACHER
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(start = if (isTeacher) 40.dp else 0.dp, end = if (isTeacher) 0.dp else 40.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isTeacher) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Text(msg.senderName, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text(msg.text, fontSize = 12.sp)
+                            Text(msg.timestamp, fontSize = 9.sp, color = Color.Gray, modifier = Modifier.align(Alignment.End))
+                        }
+                    }
+                }
+            }
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = chatInput,
+                    onValueChange = { chatInput = it },
+                    placeholder = { Text("Message Principal / Directorate...", fontSize = 12.sp) },
+                    modifier = Modifier.weight(1f)
+                )
+                Button(
+                    onClick = {
+                        if (chatInput.isNotBlank()) {
+                            chatMessages.add(
+                                ChatMessage(
+                                    id = "MSG-${System.currentTimeMillis()}",
+                                    senderRole = UserRole.TEACHER,
+                                    senderName = "Ustaz Ahmad Al-Hadi",
+                                    text = chatInput,
+                                    timestamp = "Just now",
+                                    channel = ChatChannel.TEACHER_ADMIN,
+                                    recipientName = "Principal Ustaz Ibrahim",
+                                    teacherId = "TCH-01"
+                                )
+                            )
+                            chatInput = ""
+                        }
+                    }
+                ) {
+                    Text("Send")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun StudentChatView(
+    student: Student,
+    teachers: List<TeacherProfile>,
+    chatMessages: MutableList<ChatMessage>
+) {
+    var selectedTeacherIndex by remember { mutableStateOf(0) }
+    var chatInput by remember { mutableStateOf("") }
+    val activeTeacher = teachers.getOrNull(selectedTeacherIndex) ?: teachers.firstOrNull()
+
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Ask Subject Teacher", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+
+        // Teacher pills
+        Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            teachers.forEachIndexed { idx, tch ->
+                FilterChip(
+                    selected = selectedTeacherIndex == idx,
+                    onClick = { selectedTeacherIndex = idx },
+                    label = { Text("${tch.name.split(" ")[0]} (${tch.subjectCode})", fontSize = 11.sp) }
+                )
+            }
+        }
+
+        val filtered = chatMessages.filter { it.channel == ChatChannel.TEACHER_STUDENT }
+
+        LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(filtered) { msg ->
+                val isStudent = msg.senderRole == UserRole.STUDENT
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(start = if (isStudent) 40.dp else 0.dp, end = if (isStudent) 0.dp else 40.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isStudent) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Text(msg.senderName, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text(msg.text, fontSize = 12.sp)
+                        Text(msg.timestamp, fontSize = 9.sp, color = Color.Gray, modifier = Modifier.align(Alignment.End))
+                    }
+                }
+            }
+        }
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = chatInput,
+                onValueChange = { chatInput = it },
+                placeholder = { Text("Ask ${activeTeacher?.name?.split(" ")?.firstOrNull() ?: "Teacher"}...", fontSize = 12.sp) },
+                modifier = Modifier.weight(1f)
+            )
+            Button(
+                onClick = {
+                    if (chatInput.isNotBlank()) {
+                        chatMessages.add(
+                            ChatMessage(
+                                id = "MSG-${System.currentTimeMillis()}",
+                                senderRole = UserRole.STUDENT,
+                                senderName = student.name,
+                                text = chatInput,
+                                timestamp = "Just now",
+                                channel = ChatChannel.TEACHER_STUDENT,
+                                recipientName = activeTeacher?.name ?: "Teacher",
+                                teacherId = activeTeacher?.id ?: "TCH-01",
+                                studentId = student.id
+                            )
+                        )
+                        chatInput = ""
+                    }
+                }
+            ) {
+                Text("Send")
+            }
+        }
+    }
+}
+
+@Composable
+fun AdminChatView(
+    teachers: List<TeacherProfile>,
+    chatMessages: MutableList<ChatMessage>
+) {
+    var selectedTeacherIndex by remember { mutableStateOf(0) }
+    var chatInput by remember { mutableStateOf("") }
+    val activeTeacher = teachers.getOrNull(selectedTeacherIndex) ?: teachers.firstOrNull()
+
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Principal Direct Comms with Faculty", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+
+        // Teacher pills
+        Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            teachers.forEachIndexed { idx, tch ->
+                FilterChip(
+                    selected = selectedTeacherIndex == idx,
+                    onClick = { selectedTeacherIndex = idx },
+                    label = { Text("${tch.name} (${tch.subjectCode})", fontSize = 11.sp) }
+                )
+            }
+        }
+
+        val filtered = chatMessages.filter { it.channel == ChatChannel.TEACHER_ADMIN }
+
+        LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(filtered) { msg ->
+                val isAdmin = msg.senderRole == UserRole.ADMIN
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(start = if (isAdmin) 40.dp else 0.dp, end = if (isAdmin) 0.dp else 40.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isAdmin) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Text(msg.senderName, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text(msg.text, fontSize = 12.sp)
+                        Text(msg.timestamp, fontSize = 9.sp, color = Color.Gray, modifier = Modifier.align(Alignment.End))
+                    }
+                }
+            }
+        }
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = chatInput,
+                onValueChange = { chatInput = it },
+                placeholder = { Text("Direct administrative instruction...", fontSize = 12.sp) },
+                modifier = Modifier.weight(1f)
+            )
+            Button(
+                onClick = {
+                    if (chatInput.isNotBlank()) {
+                        chatMessages.add(
+                            ChatMessage(
+                                id = "MSG-${System.currentTimeMillis()}",
+                                senderRole = UserRole.ADMIN,
+                                senderName = "Principal Ustaz Ibrahim",
+                                text = chatInput,
+                                timestamp = "Just now",
+                                channel = ChatChannel.TEACHER_ADMIN,
+                                recipientName = activeTeacher?.name ?: "Teacher",
+                                teacherId = activeTeacher?.id ?: "TCH-01"
+                            )
+                        )
+                        chatInput = ""
+                    }
+                }
+            ) {
+                Text("Send")
             }
         }
     }

@@ -393,28 +393,224 @@ export const INITIAL_ANNOUNCEMENTS: NoticeAnnouncement[] = [
 ];
 
 export const INITIAL_CHAT: ChatMessage[] = [
+  // Parent <-> Teacher Channel
   {
-    id: 'MSG-01',
+    id: 'MSG-PT-01',
     senderRole: 'teacher',
     senderName: 'Dr. Evelyn Vance',
+    recipientRole: 'parent',
+    recipientName: 'David Chen',
+    teacherId: 'TCH-03',
+    studentId: 'STU-101',
+    channel: 'parent_teacher',
     text: 'Good evening Mr. Chen! Just wanted to commend Sophia for her leadership during the biology microscope lab today.',
     timestamp: 'Yesterday 4:15 PM',
     isRead: true
   },
   {
-    id: 'MSG-02',
+    id: 'MSG-PT-02',
     senderRole: 'parent',
     senderName: 'David Chen',
+    recipientRole: 'teacher',
+    recipientName: 'Dr. Evelyn Vance',
+    teacherId: 'TCH-03',
+    studentId: 'STU-101',
+    channel: 'parent_teacher',
     text: 'Thank you Dr. Vance! She was very enthusiastic about it over dinner. We also submitted her consent form for next week’s field trip.',
     timestamp: 'Yesterday 5:20 PM',
     isRead: true
   },
   {
-    id: 'MSG-03',
+    id: 'MSG-PT-03',
     senderRole: 'teacher',
     senderName: 'Dr. Evelyn Vance',
+    recipientRole: 'parent',
+    recipientName: 'David Chen',
+    teacherId: 'TCH-03',
+    studentId: 'STU-101',
+    channel: 'parent_teacher',
     text: 'Received, thank you! Let me know if you need any adjustments before the upcoming term assessments.',
     timestamp: 'Today 9:30 AM',
+    isRead: true
+  },
+  {
+    id: 'MSG-PT-04',
+    senderRole: 'parent',
+    senderName: 'Fatima Al-Mansoor',
+    recipientRole: 'teacher',
+    recipientName: 'Ustaz Ahmad Al-Hadi',
+    teacherId: 'TCH-01',
+    studentId: 'STU-104',
+    channel: 'parent_teacher',
+    text: 'Assalamu alaikum Ustaz Ahmad, how is Yusuf progressing with his Juz Amma memorization targets this month?',
+    timestamp: 'Yesterday 2:10 PM',
+    isRead: true
+  },
+  {
+    id: 'MSG-PT-05',
+    senderRole: 'teacher',
+    senderName: 'Ustaz Ahmad Al-Hadi',
+    recipientRole: 'parent',
+    recipientName: 'Fatima Al-Mansoor',
+    teacherId: 'TCH-01',
+    studentId: 'STU-104',
+    channel: 'parent_teacher',
+    text: 'Wa alaikum assalam wa rahmatullah. Yusuf has completed Surah An-Naba with excellent makharij. He is on track for Surah An-Nazi\'at next week!',
+    timestamp: 'Yesterday 3:45 PM',
+    isRead: true
+  },
+
+  // Teacher <-> Student Channel
+  {
+    id: 'MSG-TS-01',
+    senderRole: 'student',
+    senderName: 'Sophia Chen',
+    recipientRole: 'teacher',
+    recipientName: 'Ustaz Ahmad Al-Hadi',
+    teacherId: 'TCH-01',
+    studentId: 'STU-101',
+    channel: 'teacher_student',
+    text: 'Assalamu alaikum Ustaz Ahmad! For our Tajweed homework on Surah Al-Kahf (Ayah 22), when stopping on the word "rajman bil-ghayb", do we apply iqlab with partial lip contact or full closure?',
+    timestamp: 'Today 10:15 AM',
+    isRead: true
+  },
+  {
+    id: 'MSG-TS-02',
+    senderRole: 'teacher',
+    senderName: 'Ustaz Ahmad Al-Hadi',
+    recipientRole: 'student',
+    recipientName: 'Sophia Chen',
+    teacherId: 'TCH-01',
+    studentId: 'STU-101',
+    channel: 'teacher_student',
+    text: 'Wa alaikum assalam Sophia! Excellent question. You should lightly touch the lips together without pressing hard (furjah latifah or gentle contact) while holding the ghunnah for 2 counts. You are doing wonderful practice!',
+    timestamp: 'Today 10:28 AM',
+    isRead: true
+  },
+  {
+    id: 'MSG-TS-03',
+    senderRole: 'student',
+    senderName: 'Bilal Tariq',
+    recipientRole: 'teacher',
+    recipientName: 'Dr. Evelyn Vance',
+    teacherId: 'TCH-03',
+    studentId: 'STU-103',
+    channel: 'teacher_student',
+    text: 'Dr. Vance, for the cellular respiration lab report, do we need to calculate standard error for the yeast CO2 production trial #3?',
+    timestamp: 'Yesterday 4:40 PM',
+    isRead: true
+  },
+  {
+    id: 'MSG-TS-04',
+    senderRole: 'teacher',
+    senderName: 'Dr. Evelyn Vance',
+    recipientRole: 'student',
+    recipientName: 'Bilal Tariq',
+    teacherId: 'TCH-03',
+    studentId: 'STU-103',
+    channel: 'teacher_student',
+    text: 'Yes Bilal, please include standard deviation and standard error bars on your graph. It is detailed in Rubric Part B.',
+    timestamp: 'Yesterday 5:12 PM',
+    isRead: true
+  },
+  {
+    id: 'MSG-TS-05',
+    senderRole: 'student',
+    senderName: 'Aisha Patel',
+    recipientRole: 'teacher',
+    recipientName: 'Ustaza Fatima Zahra',
+    teacherId: 'TCH-02',
+    studentId: 'STU-102',
+    channel: 'teacher_student',
+    text: 'Assalamu alaikum Ustaza Fatima, can I submit the Fiqh comparison matrix tomorrow morning before assembly?',
+    timestamp: 'Today 8:05 AM',
+    isRead: true
+  },
+  {
+    id: 'MSG-TS-06',
+    senderRole: 'teacher',
+    senderName: 'Ustaza Fatima Zahra',
+    recipientRole: 'student',
+    recipientName: 'Aisha Patel',
+    teacherId: 'TCH-02',
+    studentId: 'STU-102',
+    channel: 'teacher_student',
+    text: 'Wa alaikum assalam Aisha. Yes, that is approved. Ensure you have cited the primary daleel references from the textbook.',
+    timestamp: 'Today 8:22 AM',
+    isRead: true
+  },
+
+  // Teacher <-> Admin Channel
+  {
+    id: 'MSG-TA-01',
+    senderRole: 'admin',
+    senderName: 'Principal Ustaz Ibrahim',
+    recipientRole: 'teacher',
+    recipientName: 'Ustaz Ahmad Al-Hadi',
+    teacherId: 'TCH-01',
+    channel: 'teacher_admin',
+    text: 'Assalamu alaikum Ustaz Ahmad. The Academic Directorate has reviewed the Grade 10 Midterm Tajweed schedule. Could you please confirm room assignments for oral recitation testing?',
+    timestamp: 'Today 09:10 AM',
+    isRead: true
+  },
+  {
+    id: 'MSG-TA-02',
+    senderRole: 'teacher',
+    senderName: 'Ustaz Ahmad Al-Hadi',
+    recipientRole: 'admin',
+    recipientName: 'Principal Ustaz Ibrahim',
+    teacherId: 'TCH-01',
+    channel: 'teacher_admin',
+    text: 'Wa alaikum assalam Sheikh Ibrahim. Room 104 and Audio Lab 2 are confirmed for oral recitation on Wednesday morning. Assessment rubric and recording devices are fully staged.',
+    timestamp: 'Today 09:32 AM',
+    isRead: true
+  },
+  {
+    id: 'MSG-TA-03',
+    senderRole: 'teacher',
+    senderName: 'Dr. Evelyn Vance',
+    recipientRole: 'admin',
+    recipientName: 'Principal Ustaz Ibrahim',
+    teacherId: 'TCH-03',
+    channel: 'teacher_admin',
+    text: 'Good morning Principal Vance! Just submitting a requisition for 24 microscope lens oil immersion kits for the upcoming Term 2 STEM practicals.',
+    timestamp: 'Yesterday 11:20 AM',
+    isRead: true
+  },
+  {
+    id: 'MSG-TA-04',
+    senderRole: 'admin',
+    senderName: 'Principal Ustaz Ibrahim',
+    recipientRole: 'teacher',
+    recipientName: 'Dr. Evelyn Vance',
+    teacherId: 'TCH-03',
+    channel: 'teacher_admin',
+    text: 'Approved Dr. Vance! The purchase order has been routed to the bursar office. They should be delivered to Lab 302 by Friday.',
+    timestamp: 'Yesterday 1:15 PM',
+    isRead: true
+  },
+  {
+    id: 'MSG-TA-05',
+    senderRole: 'admin',
+    senderName: 'Principal Ustaz Ibrahim',
+    recipientRole: 'teacher',
+    recipientName: 'Ustaz Bilal Nur',
+    teacherId: 'TCH-05',
+    channel: 'teacher_admin',
+    text: 'Ustaz Bilal, reminder that all term scores for Grade 10 Hadith Studies must be locked into the master ledger by 4:00 PM today.',
+    timestamp: 'Today 11:00 AM',
+    isRead: true
+  },
+  {
+    id: 'MSG-TA-06',
+    senderRole: 'teacher',
+    senderName: 'Ustaz Bilal Nur',
+    recipientRole: 'admin',
+    recipientName: 'Principal Ustaz Ibrahim',
+    teacherId: 'TCH-05',
+    channel: 'teacher_admin',
+    text: 'Alhamdulillah Sheikh, 18 of 20 student scores are already published. Completing the final two now.',
+    timestamp: 'Today 11:24 AM',
     isRead: true
   }
 ];

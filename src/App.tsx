@@ -153,28 +153,96 @@ export default function App() {
     }));
   };
 
-  const handleSendMessage = (text: string) => {
+  const handleSendChatMessage = (msg: {
+    text: string;
+    channel: 'parent_teacher' | 'teacher_student' | 'teacher_admin';
+    senderRole: 'parent' | 'teacher' | 'student' | 'admin';
+    senderName: string;
+    recipientRole: 'parent' | 'teacher' | 'student' | 'admin';
+    recipientName: string;
+    teacherId?: string;
+    studentId?: string;
+  }) => {
     const newMsg: ChatMessage = {
       id: `MSG-${Date.now()}`,
-      senderRole: 'parent',
-      senderName: 'David Chen',
-      text,
+      senderRole: msg.senderRole,
+      senderName: msg.senderName,
+      recipientRole: msg.recipientRole,
+      recipientName: msg.recipientName,
+      teacherId: msg.teacherId,
+      studentId: msg.studentId,
+      channel: msg.channel,
+      text: msg.text,
       timestamp: 'Just now',
       isRead: true
     };
     setChatMessages(prev => [...prev, newMsg]);
 
     setTimeout(() => {
+      let replyText = 'Message received with thanks.';
+      let replyRole: 'parent' | 'teacher' | 'student' | 'admin' = 'teacher';
+      let replyName = msg.recipientName;
+
+      if (msg.channel === 'teacher_student') {
+        if (msg.senderRole === 'student') {
+          replyRole = 'teacher';
+          replyName = msg.recipientName;
+          replyText = `Wa alaikum assalam! Great question regarding your course work. Review the study guidelines in the portal, and we will practice it further in class tomorrow!`;
+        } else {
+          replyRole = 'student';
+          replyName = msg.recipientName;
+          replyText = `JazakAllah khair teacher for the clarification! I will revise my notes accordingly.`;
+        }
+      } else if (msg.channel === 'teacher_admin') {
+        if (msg.senderRole === 'teacher') {
+          replyRole = 'admin';
+          replyName = 'Principal Ustaz Ibrahim';
+          replyText = `Acknowledged and confirmed. Administrative log has been updated for Madrasaa records. Barakallahu feekum.`;
+        } else {
+          replyRole = 'teacher';
+          replyName = msg.recipientName;
+          replyText = `Received Sheikh. I will ensure all syllabus benchmarks and student assessments meet the deadline.`;
+        }
+      } else {
+        if (msg.senderRole === 'parent') {
+          replyRole = 'teacher';
+          replyName = msg.recipientName || 'Dr. Evelyn Vance';
+          replyText = `Thank you for reaching out! We appreciate your engagement with your child's progress.`;
+        } else {
+          replyRole = 'parent';
+          replyName = msg.recipientName || 'David Chen';
+          replyText = `Thank you for keeping us informed!`;
+        }
+      }
+
       const replyMsg: ChatMessage = {
         id: `MSG-${Date.now() + 1}`,
-        senderRole: 'teacher',
-        senderName: 'Dr. Evelyn Vance',
-        text: 'Thank you for following up! I have updated our records accordingly.',
+        senderRole: replyRole,
+        senderName: replyName,
+        recipientRole: msg.senderRole,
+        recipientName: msg.senderName,
+        teacherId: msg.teacherId,
+        studentId: msg.studentId,
+        channel: msg.channel,
+        text: replyText,
         timestamp: 'Just now',
         isRead: true
       };
       setChatMessages(prev => [...prev, replyMsg]);
-    }, 2000);
+    }, 1200);
+  };
+
+  const handleSendMessage = (text: string) => {
+    handleSendChatMessage({
+      text,
+      channel: 'parent_teacher',
+      senderRole: 'parent',
+      senderName: 'David Chen',
+      recipientRole: 'teacher',
+      recipientName: 'Dr. Evelyn Vance',
+      teacherId: 'TCH-03',
+      studentId: 'STU-101'
+    });
   };
 
   const handleAddAssignment = (newAsn: Partial<Assignment>) => {
@@ -536,6 +604,8 @@ export default function App() {
                   timetable={timetable}
                   announcements={announcements}
                   onSubmitAssignment={handleSubmitAssignment}
+                  chatMessages={chatMessages}
+                  onSendMessage={handleSendChatMessage}
                 />
               )}
 
@@ -561,6 +631,8 @@ export default function App() {
                   onRecordAttendance={handleRecordAttendance}
                   scoresData={multiTeacherScores}
                   onUpdateScores={setMultiTeacherScores}
+                  chatMessages={chatMessages}
+                  onSendMessage={handleSendChatMessage}
                 />
               )}
 
@@ -569,6 +641,8 @@ export default function App() {
                   students={students}
                   onTriggerEmergencyBroadcast={handleEmergencyBroadcast}
                   onOpenPerformanceReports={handleOpenPerformanceReports}
+                  chatMessages={chatMessages}
+                  onSendMessage={handleSendChatMessage}
                 />
               )}
             </MobileFrame>

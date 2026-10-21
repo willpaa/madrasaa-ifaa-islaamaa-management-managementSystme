@@ -108,3 +108,19 @@ data class StudentSubjectScore(
         else -> 0.0f
     }
 }
+
+enum class ChatChannel {
+    PARENT_TEACHER, TEACHER_STUDENT, TEACHER_ADMIN
+}
+
+data class ChatMessage(
+    val id: String,
+    val senderRole: UserRole,
+    val senderName: String,
+    val text: String,
+    val timestamp: String,
+    val channel: ChatChannel = ChatChannel.TEACHER_STUDENT,
+    val recipientName: String = "",
+    val teacherId: String = "",
+    val studentId: String = ""
+)

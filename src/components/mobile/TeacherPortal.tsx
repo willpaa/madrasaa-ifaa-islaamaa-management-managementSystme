@@ -4,12 +4,15 @@ import {
   AttendanceRecord, 
   Assignment,
   TeacherProfile,
-  StudentScoreInput
+  StudentScoreInput,
+  ChatMessage,
+  ChatChannel
 } from '../../types/school';
 import { 
   INITIAL_TEACHERS, 
   INITIAL_MULTI_TEACHER_SCORES, 
-  calculateScoreMetrics 
+  calculateScoreMetrics,
+  INITIAL_CHAT
 } from '../../data/mockSchoolData';
 import { 
   CheckCheck, 
@@ -41,7 +44,12 @@ import {
   X,
   FileText,
   ShieldCheck,
-  Calendar
+  Calendar,
+  MessageSquare,
+  MessageCircle,
+  HelpCircle,
+  Building,
+  UserCheck2
 } from 'lucide-react';
 
 interface TeacherPortalProps {
@@ -51,6 +59,17 @@ interface TeacherPortalProps {
   onRecordAttendance: (records: AttendanceRecord[]) => void;
   scoresData?: Record<string, Record<string, StudentScoreInput>>;
   onUpdateScores?: (scores: Record<string, Record<string, StudentScoreInput>>) => void;
+  chatMessages?: ChatMessage[];
+  onSendMessage?: (msg: {
+    text: string;
+    channel: 'parent_teacher' | 'teacher_student' | 'teacher_admin';
+    senderRole: 'parent' | 'teacher' | 'student' | 'admin';
+    senderName: string;
+    recipientRole: 'parent' | 'teacher' | 'student' | 'admin';
+    recipientName: string;
+    teacherId?: string;
+    studentId?: string;
+  }) => void;
 }
 
 export const TeacherPortal: React.FC<TeacherPortalProps> = ({
@@ -59,9 +78,11 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
   onAddAssignment,
   onRecordAttendance,
   scoresData,
-  onUpdateScores
+  onUpdateScores,
+  chatMessages = INITIAL_CHAT,
+  onSendMessage
 }) => {
-  const [activeTab, setActiveTab] = useState<'attendance' | 'gradebook' | 'assignments' | 'broadcast'>('gradebook');
+  const [activeTab, setActiveTab] = useState<'attendance' | 'gradebook' | 'assignments' | 'chat' | 'broadcast'>('gradebook');
   
   // Active Teacher Profile selection
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>('TCH-01'); // Default Ustaz Ahmad Al-Hadi
@@ -106,6 +127,54 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
   const [broadcastTitle, setBroadcastTitle] = useState(`Notice from ${activeTeacher.name}`);
   const [broadcastText, setBroadcastText] = useState(`Review the ${activeTeacher.subjectName} study packet for the upcoming assessment.`);
   const [broadcastSuccess, setBroadcastSuccess] = useState(false);
+
+  // Teacher Multi-Channel Chat State (Student, Admin, Parent)
+  const [chatChannelTab, setChatChannelTab] = useState<'student' | 'admin' | 'parent'>('student');
+  const [selectedStudentContactId, setSelectedStudentContactId] = useState<string>('STU-101'); // Sophia Chen
+  const [teacherChatInput, setTeacherChatInput] = useState<string>('');
+
+  const handleTeacherSendMessage = (e?: React.FormEvent, customText?: string) => {
+    if (e) e.preventDefault();
+    const textToSend = (customText || teacherChatInput).trim();
+    if (!textToSend || !onSendMessage) return;
+
+    if (chatChannelTab === 'student') {
+      const studentObj = students.find(s => s.id === selectedStudentContactId) || students[0];
+      onSendMessage({
+        text: textToSend,
+        channel: 'teacher_student',
+        senderRole: 'teacher',
+        senderName: activeTeacher.name,
+        recipientRole: 'student',
+        recipientName: studentObj.name,
+        teacherId: activeTeacher.id,
+        studentId: studentObj.id
+      });
+    } else if (chatChannelTab === 'admin') {
+      onSendMessage({
+        text: textToSend,
+        channel: 'teacher_admin',
+        senderRole: 'teacher',
+        senderName: activeTeacher.name,
+        recipientRole: 'admin',
+        recipientName: 'Principal Ustaz Ibrahim',
+        teacherId: activeTeacher.id
+      });
+    } else {
+      const studentObj = students.find(s => s.id === selectedStudentContactId) || students[0];
+      onSendMessage({
+        text: textToSend,
+        channel: 'parent_teacher',
+        senderRole: 'teacher',
+        senderName: activeTeacher.name,
+        recipientRole: 'parent',
+        recipientName: studentObj.parentName,
+        teacherId: activeTeacher.id,
+        studentId: studentObj.id
+      });
+    }
+    setTeacherChatInput('');
+  };
 
   // Helper to get score for a student and subject
   const getStudentScore = (studentId: string, subjectCode: string): StudentScoreInput => {
@@ -1074,6 +1143,430 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
             </div>
           </div>
         )}
+
+        {/* TAB 5: MULTI-CHANNEL TEACHER CHAT (STUDENTS, ADMIN, PARENTS) */}
+        {activeTab === 'chat' && (
+          <div className="flex flex-col h-[530px] space-y-2">
+            {/* Communication Target Channel Switcher */}
+            <div className="bg-slate-900 border border-slate-800 p-1.5 rounded-2xl flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setChatChannelTab('student')}
+                className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  chatChannelTab === 'student'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Students</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setChatChannelTab('admin')}
+                className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  chatChannelTab === 'admin'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Building className="w-3.5 h-3.5" />
+                <span>Administration</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setChatChannelTab('parent')}
+                className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  chatChannelTab === 'parent'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <UserCheck2 className="w-3.5 h-3.5" />
+                <span>Parents</span>
+              </button>
+            </div>
+
+            {/* CHANNEL 1: STUDENT CHAT */}
+            {chatChannelTab === 'student' && (
+              <div className="flex-1 flex flex-col min-h-0 bg-slate-900/60 border border-slate-800 rounded-2xl p-3">
+                {/* Horizontal Student Contacts Bar */}
+                <div className="mb-2 pb-2 border-b border-slate-800/80">
+                  <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1.5 flex items-center justify-between">
+                    <span>Grade 10-A Student Inquiries</span>
+                    <span className="text-[9px] text-indigo-400 font-mono">
+                      {grade10Students.length} Enrolled
+                    </span>
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
+                    {grade10Students.map((stu) => {
+                      const isSelected = selectedStudentContactId === stu.id;
+                      return (
+                        <button
+                          key={stu.id}
+                          type="button"
+                          onClick={() => setSelectedStudentContactId(stu.id)}
+                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border shrink-0 text-left transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-indigo-950/80 border-indigo-500 text-white shadow-xs'
+                              : 'bg-slate-950/70 border-slate-800 text-slate-300 hover:border-slate-700'
+                          }`}
+                        >
+                          <img
+                            src={stu.avatar}
+                            alt={stu.name}
+                            className="w-6 h-6 rounded-full object-cover"
+                          />
+                          <div>
+                            <p className="text-[11px] font-bold leading-tight">{stu.name.split(' ')[0]}</p>
+                            <p className="text-[9px] text-slate-400 font-mono">#{stu.rollNumber}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Active Student Header */}
+                {(() => {
+                  const currentStudent = students.find(s => s.id === selectedStudentContactId) || students[0];
+                  const studentMessages = chatMessages.filter(
+                    m => m.channel === 'teacher_student' &&
+                      (m.studentId === currentStudent.id ||
+                       m.recipientName?.includes(currentStudent.name) ||
+                       m.senderName?.includes(currentStudent.name))
+                  );
+
+                  return (
+                    <>
+                      <div className="flex items-center justify-between p-2 bg-slate-950/80 border border-slate-800/80 rounded-xl mb-2">
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={currentStudent.avatar}
+                            alt={currentStudent.name}
+                            className="w-7 h-7 rounded-full object-cover ring-1 ring-indigo-500/50"
+                          />
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-bold text-white">{currentStudent.name}</span>
+                              <span className="text-[9px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                                Student • Gr {currentStudent.grade}-{currentStudent.section}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-emerald-400">Course: {activeTeacher.subjectName}</span>
+                          </div>
+                        </div>
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Active"></span>
+                      </div>
+
+                      {/* Chat Messages Feed */}
+                      <div className="flex-1 space-y-2 overflow-y-auto pr-1">
+                        {studentMessages.length === 0 ? (
+                          <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500">
+                            <MessageCircle className="w-8 h-8 mb-1 text-slate-600" />
+                            <p className="text-xs">No previous messages with {currentStudent.name}.</p>
+                            <p className="text-[10px] text-slate-600">Send homework guidance or Tajweed feedback below.</p>
+                          </div>
+                        ) : (
+                          studentMessages.map((msg) => {
+                            const isMe = msg.senderRole === 'teacher';
+                            return (
+                              <div
+                                key={msg.id}
+                                className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
+                              >
+                                <div
+                                  className={`max-w-[85%] p-2.5 rounded-2xl text-xs leading-relaxed ${
+                                    isMe
+                                      ? 'bg-indigo-600 text-white rounded-br-xs'
+                                      : 'bg-slate-950 text-slate-200 border border-slate-800 rounded-bl-xs'
+                                  }`}
+                                >
+                                  <div className="text-[9px] font-semibold opacity-75 mb-0.5">
+                                    {isMe ? activeTeacher.name : msg.senderName}
+                                  </div>
+                                  {msg.text}
+                                </div>
+                                <span className="text-[9px] text-slate-500 mt-0.5 px-1 font-mono">
+                                  {msg.timestamp}
+                                </span>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+
+                      {/* Quick Reply Pills */}
+                      <div className="flex gap-1.5 overflow-x-auto py-1.5 scrollbar-thin">
+                        <button
+                          type="button"
+                          onClick={() => handleTeacherSendMessage(undefined, `Makharij & Tajweed rule approved. Great recitation practice!`)}
+                          className="px-2 py-0.5 bg-slate-950 border border-slate-800 hover:border-indigo-500 rounded-lg text-[10px] text-slate-300 hover:text-white shrink-0 cursor-pointer"
+                        >
+                          📖 Tajweed approved
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleTeacherSendMessage(undefined, `Please review Section 3 of the homework packet before tomorrow's class.`)}
+                          className="px-2 py-0.5 bg-slate-950 border border-slate-800 hover:border-indigo-500 rounded-lg text-[10px] text-slate-300 hover:text-white shrink-0 cursor-pointer"
+                        >
+                          📝 Check Section 3
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleTeacherSendMessage(undefined, `Deadline extended by 24 hours. Submit by 5:00 PM tomorrow.`)}
+                          className="px-2 py-0.5 bg-slate-950 border border-slate-800 hover:border-indigo-500 rounded-lg text-[10px] text-slate-300 hover:text-white shrink-0 cursor-pointer"
+                        >
+                          ⏰ +24h Extension
+                        </button>
+                      </div>
+
+                      {/* Input Box */}
+                      <form onSubmit={handleTeacherSendMessage} className="flex gap-2 pt-1 border-t border-slate-800/80">
+                        <input
+                          type="text"
+                          value={teacherChatInput}
+                          onChange={(e) => setTeacherChatInput(e.target.value)}
+                          placeholder={`Reply to ${currentStudent.name.split(' ')[0]}...`}
+                          className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                        />
+                        <button
+                          type="submit"
+                          className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl cursor-pointer flex items-center justify-center shadow-xs"
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                        </button>
+                      </form>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* CHANNEL 2: ADMIN & PRINCIPAL CHAT */}
+            {chatChannelTab === 'admin' && (
+              <div className="flex-1 flex flex-col min-h-0 bg-slate-900/60 border border-slate-800 rounded-2xl p-3">
+                {/* Admin Contact Header */}
+                <div className="flex items-center justify-between p-2.5 bg-slate-950/80 border border-slate-800/80 rounded-xl mb-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-rose-600 to-indigo-600 flex items-center justify-center text-white shadow-sm font-bold text-xs">
+                      PI
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-white">Principal Ustaz Ibrahim</span>
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                          Office of the Principal
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-slate-400">Academic Directorate & Faculty Affairs</span>
+                    </div>
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-medium">
+                    Desk Online
+                  </span>
+                </div>
+
+                {/* Admin Chat Feed */}
+                {(() => {
+                  const adminMessages = chatMessages.filter(
+                    m => m.channel === 'teacher_admin'
+                  );
+
+                  return (
+                    <>
+                      <div className="flex-1 space-y-2 overflow-y-auto pr-1">
+                        {adminMessages.map((msg) => {
+                          const isMe = msg.senderRole === 'teacher';
+                          return (
+                            <div
+                              key={msg.id}
+                              className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
+                            >
+                              <div
+                                className={`max-w-[85%] p-2.5 rounded-2xl text-xs leading-relaxed ${
+                                  isMe
+                                    ? 'bg-indigo-600 text-white rounded-br-xs'
+                                    : 'bg-slate-950 text-slate-200 border border-slate-800 rounded-bl-xs'
+                                }`}
+                              >
+                                <div className="text-[9px] font-semibold opacity-75 mb-0.5 flex items-center justify-between gap-3">
+                                  <span>{isMe ? activeTeacher.name : msg.senderName}</span>
+                                  <span className="text-[8px] uppercase tracking-wider text-indigo-200">
+                                    {isMe ? 'Faculty' : 'Administration'}
+                                  </span>
+                                </div>
+                                {msg.text}
+                              </div>
+                              <span className="text-[9px] text-slate-500 mt-0.5 px-1 font-mono">
+                                {msg.timestamp}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Quick Admin Action Chips */}
+                      <div className="flex gap-1.5 overflow-x-auto py-1.5 scrollbar-thin">
+                        <button
+                          type="button"
+                          onClick={() => handleTeacherSendMessage(undefined, `Exam rooms & recitation staging confirmed for Grade 10.`)}
+                          className="px-2 py-0.5 bg-slate-950 border border-slate-800 hover:border-indigo-500 rounded-lg text-[10px] text-slate-300 hover:text-white shrink-0 cursor-pointer"
+                        >
+                          🏛️ Rooms confirmed
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleTeacherSendMessage(undefined, `Scores for all 20 students have been finalized in the master ledger.`)}
+                          className="px-2 py-0.5 bg-slate-950 border border-slate-800 hover:border-indigo-500 rounded-lg text-[10px] text-slate-300 hover:text-white shrink-0 cursor-pointer"
+                        >
+                          📊 Scores locked
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleTeacherSendMessage(undefined, `Submitting curriculum syllabus review for next term.`)}
+                          className="px-2 py-0.5 bg-slate-950 border border-slate-800 hover:border-indigo-500 rounded-lg text-[10px] text-slate-300 hover:text-white shrink-0 cursor-pointer"
+                        >
+                          📄 Syllabus ready
+                        </button>
+                      </div>
+
+                      {/* Admin Message Input */}
+                      <form onSubmit={handleTeacherSendMessage} className="flex gap-2 pt-1 border-t border-slate-800/80">
+                        <input
+                          type="text"
+                          value={teacherChatInput}
+                          onChange={(e) => setTeacherChatInput(e.target.value)}
+                          placeholder="Message Principal / Directorate..."
+                          className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                        />
+                        <button
+                          type="submit"
+                          className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl cursor-pointer flex items-center justify-center shadow-xs"
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                        </button>
+                      </form>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* CHANNEL 3: PARENTS CHAT */}
+            {chatChannelTab === 'parent' && (
+              <div className="flex-1 flex flex-col min-h-0 bg-slate-900/60 border border-slate-800 rounded-2xl p-3">
+                <div className="mb-2 pb-2 border-b border-slate-800/80">
+                  <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1.5">
+                    Parent & Guardian Directory
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
+                    {grade10Students.map((stu) => {
+                      const isSelected = selectedStudentContactId === stu.id;
+                      return (
+                        <button
+                          key={stu.id}
+                          type="button"
+                          onClick={() => setSelectedStudentContactId(stu.id)}
+                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border shrink-0 text-left transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-indigo-950/80 border-indigo-500 text-white shadow-xs'
+                              : 'bg-slate-950/70 border-slate-800 text-slate-300 hover:border-slate-700'
+                          }`}
+                        >
+                          <div className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-bold text-indigo-400">
+                            {stu.parentName.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="text-[11px] font-bold leading-tight">{stu.parentName}</p>
+                            <p className="text-[9px] text-slate-400">Parent of {stu.name.split(' ')[0]}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {(() => {
+                  const currentStudent = students.find(s => s.id === selectedStudentContactId) || students[0];
+                  const parentMessages = chatMessages.filter(
+                    m => m.channel === 'parent_teacher' &&
+                      (m.studentId === currentStudent.id ||
+                       m.recipientName?.includes(currentStudent.parentName) ||
+                       m.senderName?.includes(currentStudent.parentName))
+                  );
+
+                  return (
+                    <>
+                      <div className="flex items-center justify-between p-2 bg-slate-950/80 border border-slate-800/80 rounded-xl mb-2">
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-bold text-white">{currentStudent.parentName}</span>
+                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300">
+                              Guardian of {currentStudent.name}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-400">Phone: {currentStudent.parentPhone}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex-1 space-y-2 overflow-y-auto pr-1">
+                        {parentMessages.length === 0 ? (
+                          <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500">
+                            <MessageCircle className="w-8 h-8 mb-1 text-slate-600" />
+                            <p className="text-xs">No prior messages with {currentStudent.parentName}.</p>
+                            <p className="text-[10px] text-slate-600">You can message them regarding student progress.</p>
+                          </div>
+                        ) : (
+                          parentMessages.map((msg) => {
+                            const isMe = msg.senderRole === 'teacher';
+                            return (
+                              <div
+                                key={msg.id}
+                                className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
+                              >
+                                <div
+                                  className={`max-w-[85%] p-2.5 rounded-2xl text-xs leading-relaxed ${
+                                    isMe
+                                      ? 'bg-indigo-600 text-white rounded-br-xs'
+                                      : 'bg-slate-950 text-slate-200 border border-slate-800 rounded-bl-xs'
+                                  }`}
+                                >
+                                  {msg.text}
+                                </div>
+                                <span className="text-[9px] text-slate-500 mt-0.5 px-1 font-mono">
+                                  {msg.timestamp}
+                                </span>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+
+                      <form onSubmit={handleTeacherSendMessage} className="flex gap-2 pt-1 border-t border-slate-800/80">
+                        <input
+                          type="text"
+                          value={teacherChatInput}
+                          onChange={(e) => setTeacherChatInput(e.target.value)}
+                          placeholder={`Message ${currentStudent.parentName}...`}
+                          className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                        />
+                        <button
+                          type="submit"
+                          className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl cursor-pointer flex items-center justify-center shadow-xs"
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                        </button>
+                      </form>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* MODAL: COMBINED OFFICIAL STUDENT REPORT CARD (ALL TEACHERS) */}
@@ -1308,6 +1801,17 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
         >
           <BookOpen className="w-4 h-4" />
           <span>Homework</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('chat')}
+          className={`flex flex-col items-center gap-1 text-[10px] font-medium transition-colors cursor-pointer relative ${
+            activeTab === 'chat' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'
+          }`}
+        >
+          <MessageSquare className="w-4 h-4" />
+          <span>Messages</span>
+          <span className="absolute top-0 right-3 w-2 h-2 rounded-full bg-indigo-500 ring-2 ring-slate-950"></span>
         </button>
 
         <button

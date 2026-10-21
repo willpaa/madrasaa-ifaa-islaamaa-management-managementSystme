@@ -96,13 +96,20 @@ export interface NoticeAnnouncement {
   sender: string;
 }
 
+export type ChatChannel = 'parent_teacher' | 'teacher_student' | 'teacher_admin';
+
 export interface ChatMessage {
   id: string;
-  senderRole: 'parent' | 'teacher';
+  senderRole: 'parent' | 'teacher' | 'student' | 'admin';
   senderName: string;
   text: string;
   timestamp: string;
   isRead: boolean;
+  channel?: ChatChannel;
+  recipientRole?: 'parent' | 'teacher' | 'student' | 'admin';
+  recipientName?: string;
+  teacherId?: string;
+  studentId?: string;
 }
 
 // SRS Specific Types

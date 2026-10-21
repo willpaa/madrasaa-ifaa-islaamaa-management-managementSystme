@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Student } from '../../types/school';
+import { Student, ChatMessage, ChatChannel } from '../../types/school';
+import { INITIAL_TEACHERS, INITIAL_CHAT } from '../../data/mockSchoolData';
 import { 
   Building2, 
   TrendingUp, 
@@ -18,27 +19,68 @@ import {
   ExternalLink,
   LayoutDashboard,
   BellRing,
-  GraduationCap
+  GraduationCap,
+  MessageSquare,
+  MessageCircle,
+  Send,
+  Building
 } from 'lucide-react';
 
 interface AdminPortalProps {
   students: Student[];
   onTriggerEmergencyBroadcast: (title: string, message: string) => void;
   onOpenPerformanceReports?: (studentId?: string) => void;
+  chatMessages?: ChatMessage[];
+  onSendMessage?: (msg: {
+    text: string;
+    channel: 'parent_teacher' | 'teacher_student' | 'teacher_admin';
+    senderRole: 'parent' | 'teacher' | 'student' | 'admin';
+    senderName: string;
+    recipientRole: 'parent' | 'teacher' | 'student' | 'admin';
+    recipientName: string;
+    teacherId?: string;
+    studentId?: string;
+  }) => void;
 }
 
 export const AdminPortal: React.FC<AdminPortalProps> = ({
   students,
   onTriggerEmergencyBroadcast,
-  onOpenPerformanceReports
+  onOpenPerformanceReports,
+  chatMessages = INITIAL_CHAT,
+  onSendMessage
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'directory' | 'reports' | 'broadcast'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'directory' | 'chat' | 'reports' | 'broadcast'>('overview');
   const [selectedStage, setSelectedStage] = useState<'all' | 'primary' | 'middle' | 'high'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
   const [broadcastTitle, setBroadcastTitle] = useState('Campus Weather Alert: Early Dismissal 1:00 PM');
   const [broadcastMessage, setBroadcastMessage] = useState('Heavy snowfall forecasted across northern district. Buses will depart campus at 1:00 PM today.');
   const [broadcastSent, setBroadcastSent] = useState(false);
+
+  // Admin <-> Teacher Chat State
+  const [selectedTeacherContactId, setSelectedTeacherContactId] = useState<string>('TCH-01'); // Ustaz Ahmad Al-Hadi
+  const [adminChatInput, setAdminChatInput] = useState<string>('');
+
+  const selectedTeacher = INITIAL_TEACHERS.find(t => t.id === selectedTeacherContactId) || INITIAL_TEACHERS[0];
+
+  const handleAdminSendMessage = (e?: React.FormEvent, customText?: string) => {
+    if (e) e.preventDefault();
+    const textToSend = (customText || adminChatInput).trim();
+    if (!textToSend || !onSendMessage) return;
+
+    onSendMessage({
+      text: textToSend,
+      channel: 'teacher_admin',
+      senderRole: 'admin',
+      senderName: 'Principal Ustaz Ibrahim',
+      recipientRole: 'teacher',
+      recipientName: selectedTeacher.name,
+      teacherId: selectedTeacher.id
+    });
+
+    setAdminChatInput('');
+  };
 
   const filteredStudents = students.filter(s => {
     const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -359,6 +401,172 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
             </div>
           </div>
         )}
+
+        {/* TAB 5: FACULTY & TEACHER CHAT (ADMIN <-> TEACHER) */}
+        {activeTab === 'chat' && (
+          <div className="flex flex-col h-[520px] space-y-2.5">
+            {/* Header: Faculty Roster Selection */}
+            <div className="bg-slate-900 border border-slate-800 p-2.5 rounded-2xl">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+                    Faculty Direct Line
+                  </span>
+                  <span className="text-[9px] text-indigo-400">Principal & Registrar Desk</span>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-medium">
+                  Active Faculty
+                </span>
+              </div>
+
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
+                {INITIAL_TEACHERS.map((tch) => {
+                  const isSelected = selectedTeacherContactId === tch.id;
+                  return (
+                    <button
+                      key={tch.id}
+                      type="button"
+                      onClick={() => setSelectedTeacherContactId(tch.id)}
+                      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl border shrink-0 text-left transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-indigo-950/90 border-indigo-500 text-white shadow-xs'
+                          : 'bg-slate-950/70 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                      }`}
+                    >
+                      <img
+                        src={tch.avatar}
+                        alt={tch.name}
+                        className="w-7 h-7 rounded-full object-cover ring-1 ring-indigo-500/50"
+                      />
+                      <div>
+                        <p className="text-[11px] font-bold leading-tight text-white">{tch.name.split(' ')[0]} {tch.name.split(' ')[1] || ''}</p>
+                        <p className="text-[9px] text-slate-400">{tch.subjectCode}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Active Teacher Conversation Window */}
+            {(() => {
+              const teacherAdminMessages = chatMessages.filter(
+                m => m.channel === 'teacher_admin' &&
+                  (m.teacherId === selectedTeacher.id ||
+                   m.recipientName?.includes(selectedTeacher.name) ||
+                   m.senderName?.includes(selectedTeacher.name))
+              );
+
+              return (
+                <div className="flex-1 flex flex-col min-h-0 bg-slate-900/60 border border-slate-800 rounded-2xl p-3">
+                  {/* Selected Faculty Details Strip */}
+                  <div className="flex items-center justify-between p-2.5 bg-slate-950/80 border border-slate-800/80 rounded-xl mb-2">
+                    <div className="flex items-center gap-2.5">
+                      <img
+                        src={selectedTeacher.avatar}
+                        alt={selectedTeacher.name}
+                        className="w-8 h-8 rounded-full object-cover ring-2 ring-indigo-500/50"
+                      />
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="text-xs font-bold text-white">{selectedTeacher.name}</h4>
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                            {selectedTeacher.department}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-400">
+                          Subject: {selectedTeacher.subjectName} ({selectedTeacher.subjectCode})
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Messages Feed */}
+                  <div className="flex-1 space-y-2 overflow-y-auto pr-1">
+                    {teacherAdminMessages.length === 0 ? (
+                      <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500">
+                        <MessageCircle className="w-8 h-8 mb-1 text-slate-600" />
+                        <p className="text-xs">No administrative messages on file with {selectedTeacher.name}.</p>
+                        <p className="text-[10px] text-slate-600">Send an administrative directive or syllabus confirmation below.</p>
+                      </div>
+                    ) : (
+                      teacherAdminMessages.map((msg) => {
+                        const isAdmin = msg.senderRole === 'admin';
+                        return (
+                          <div
+                            key={msg.id}
+                            className={`flex flex-col ${isAdmin ? 'items-end' : 'items-start'}`}
+                          >
+                            <div
+                              className={`max-w-[85%] p-2.5 rounded-2xl text-xs leading-relaxed ${
+                                isAdmin
+                                  ? 'bg-rose-600 text-white rounded-br-xs'
+                                  : 'bg-slate-950 text-slate-200 border border-slate-800 rounded-bl-xs'
+                              }`}
+                            >
+                              <div className="text-[9px] font-semibold opacity-80 mb-0.5 flex items-center justify-between gap-3">
+                                <span>{isAdmin ? 'Principal Ustaz Ibrahim' : selectedTeacher.name}</span>
+                                <span className="text-[8px] uppercase tracking-wider text-rose-100">
+                                  {isAdmin ? 'Principal Office' : 'Faculty'}
+                                </span>
+                              </div>
+                              {msg.text}
+                            </div>
+                            <span className="text-[9px] text-slate-500 mt-0.5 px-1 font-mono">
+                              {msg.timestamp}
+                            </span>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Quick Admin Template Directives */}
+                  <div className="flex gap-1.5 overflow-x-auto py-1.5 scrollbar-thin">
+                    <button
+                      type="button"
+                      onClick={() => handleAdminSendMessage(undefined, `Please ensure all Grade 10 student scores are locked into the master ledger by 4:00 PM.`)}
+                      className="px-2 py-0.5 bg-slate-950 border border-slate-800 hover:border-indigo-500 rounded-lg text-[10px] text-slate-300 hover:text-white shrink-0 cursor-pointer"
+                    >
+                      ⏰ Ledger deadline
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAdminSendMessage(undefined, `Room and testing session allocation confirmed for your upcoming oral assessments.`)}
+                      className="px-2 py-0.5 bg-slate-950 border border-slate-800 hover:border-indigo-500 rounded-lg text-[10px] text-slate-300 hover:text-white shrink-0 cursor-pointer"
+                    >
+                      🏛️ Rooms confirmed
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAdminSendMessage(undefined, `Requisition order for department materials approved by Bursar Office.`)}
+                      className="px-2 py-0.5 bg-slate-950 border border-slate-800 hover:border-indigo-500 rounded-lg text-[10px] text-slate-300 hover:text-white shrink-0 cursor-pointer"
+                    >
+                      📦 Order approved
+                    </button>
+                  </div>
+
+                  {/* Message Input Box */}
+                  <form onSubmit={handleAdminSendMessage} className="flex gap-2 pt-1 border-t border-slate-800/80">
+                    <input
+                      type="text"
+                      value={adminChatInput}
+                      onChange={(e) => setAdminChatInput(e.target.value)}
+                      placeholder={`Direct message ${selectedTeacher.name.split(' ')[0]}...`}
+                      className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                    />
+                    <button
+                      type="submit"
+                      className="px-3.5 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl cursor-pointer flex items-center justify-center shadow-xs"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                    </button>
+                  </form>
+                </div>
+              );
+            })()}
+          </div>
+        )}
       </div>
 
       {/* Modal: Emergency Broadcast Trigger */}
@@ -434,6 +642,17 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
         >
           <Users className="w-4 h-4" />
           <span>Students</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('chat')}
+          className={`flex flex-col items-center gap-1 text-[10px] font-medium transition-colors cursor-pointer relative ${
+            activeTab === 'chat' ? 'text-rose-400' : 'text-slate-500 hover:text-slate-300'
+          }`}
+        >
+          <MessageSquare className="w-4 h-4" />
+          <span>Staff Chat</span>
+          <span className="absolute top-0 right-3 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-slate-950"></span>
         </button>
 
         <button

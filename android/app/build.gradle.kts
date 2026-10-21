@@ -52,6 +52,10 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.navigation:navigation-compose:2.8.3")
     
+    // Biometric Authentication (Fingerprint & Face Unlock)
+    implementation("androidx.biometric:biometric:1.2.0-alpha05")
+    implementation("androidx.fragment:fragment-ktx:1.8.5")
+    
     // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

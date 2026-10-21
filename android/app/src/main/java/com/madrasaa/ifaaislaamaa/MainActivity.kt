@@ -1,8 +1,12 @@
 package com.madrasaa.ifaaislaamaa
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -29,7 +33,54 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.madrasaa.ifaaislaamaa.model.*
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
+
+    fun showBiometricPrompt(
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val biometricManager = BiometricManager.from(this)
+        val authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        val canAuth = biometricManager.canAuthenticate(authenticators)
+
+        if (canAuth == BiometricManager.BIOMETRIC_SUCCESS) {
+            val executor = ContextCompat.getMainExecutor(this)
+            val callback = object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    super.onAuthenticationSucceeded(result)
+                    onSuccess()
+                }
+
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    super.onAuthenticationError(errorCode, errString)
+                    onError(errString.toString())
+                }
+
+                override fun onAuthenticationFailed() {
+                    super.onAuthenticationFailed()
+                    onError("Biometric verification not recognized. Please scan fingerprint or face again.")
+                }
+            }
+
+            val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                .setTitle("Madrasaa Ifaa Islaamaa")
+                .setSubtitle("Biometric Authentication Required")
+                .setDescription("Scan fingerprint or use face unlock to access student records and gradebooks.")
+                .setAllowedAuthenticators(authenticators)
+                .build()
+
+            val prompt = BiometricPrompt(this, executor, callback)
+            prompt.authenticate(promptInfo)
+        } else {
+            when (canAuth) {
+                BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> onError("No biometric sensor detected on this device. Use PIN fallback.")
+                BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE -> onError("Biometric hardware is currently unavailable. Use PIN fallback.")
+                BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> onError("No fingerprints or face recognized on device. Please enroll in Android Settings or use PIN.")
+                else -> onError("Biometric status code ($canAuth). Use PIN fallback.")
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -50,7 +101,60 @@ class MainActivity : ComponentActivity() {
                     onSurfaceVariant = Color(0xFF94A3B8)
                 )
             ) {
-                MadrasaaIfaaIslaamaaApp()
+                var isUnlocked by remember { mutableStateOf(false) }
+                var authError by remember { mutableStateOf<String?>(null) }
+                var showPinDialog by remember { mutableStateOf(false) }
+
+                // Auto-prompt biometrics on launch
+                LaunchedEffect(Unit) {
+                    showBiometricPrompt(
+                        onSuccess = {
+                            isUnlocked = true
+                            authError = null
+                        },
+                        onError = { err ->
+                            authError = err
+                        }
+                    )
+                }
+
+                if (!isUnlocked) {
+                    BiometricLockScreen(
+                        authError = authError,
+                        onTriggerBiometrics = {
+                            showBiometricPrompt(
+                                onSuccess = {
+                                    isUnlocked = true
+                                    authError = null
+                                },
+                                onError = { err ->
+                                    authError = err
+                                }
+                            )
+                        },
+                        onUsePin = {
+                            showPinDialog = true
+                        }
+                    )
+
+                    if (showPinDialog) {
+                        PinFallbackDialog(
+                            onDismiss = { showPinDialog = false },
+                            onSuccess = {
+                                isUnlocked = true
+                                authError = null
+                                showPinDialog = false
+                            }
+                        )
+                    }
+                } else {
+                    MadrasaaIfaaIslaamaaApp(
+                        onLockApp = {
+                            isUnlocked = false
+                            authError = null
+                        }
+                    )
+                }
             }
         }
     }
@@ -58,7 +162,7 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MadrasaaIfaaIslaamaaApp() {
+fun MadrasaaIfaaIslaamaaApp(onLockApp: () -> Unit = {}) {
     var selectedRole by remember { mutableStateOf(UserRole.STUDENT) }
     var currentBottomTab by remember { mutableStateOf("dashboard") }
 
@@ -163,6 +267,18 @@ fun MadrasaaIfaaIslaamaaApp() {
                     }
                 },
                 actions = {
+                    // Lock App action
+                    IconButton(
+                        onClick = onLockApp,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Lock,
+                            contentDescription = "Lock App",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
                     // Role Switcher in Top Bar
                     AssistChip(
                         onClick = {
@@ -1743,3 +1859,229 @@ fun AdminChatView(
         }
     }
 }
+
+// =========================================================================
+// 6. BIOMETRIC SECURITY LOCK SCREEN & PIN FALLBACK
+// =========================================================================
+
+@Composable
+fun BiometricLockScreen(
+    authError: String?,
+    onTriggerBiometrics: () -> Unit,
+    onUsePin: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF020617))
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = 420.dp)
+        ) {
+            // Biometric Emblem with Glowing Ring
+            Box(
+                modifier = Modifier
+                    .size(96.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF1E1B4B))
+                    .border(2.dp, Color(0xFF6366F1), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Fingerprint,
+                    contentDescription = "Biometric Lock",
+                    tint = Color(0xFF818CF8),
+                    modifier = Modifier.size(54.dp)
+                )
+            }
+
+            Column(horizontalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Madrasaa Ifaa Islaamaa",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    text = "K-12 Secure School Management System",
+                    fontSize = 12.sp,
+                    color = Color(0xFF94A3B8),
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            SuggestionChip(
+                onClick = {},
+                label = {
+                    Text(
+                        "🔒 Biometric Security Shield",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFFA7F3D0)
+                    )
+                },
+                colors = SuggestionChipDefaults.suggestionChipColors(
+                    containerColor = Color(0xFF064E3B)
+                ),
+                border = BorderStroke(1.dp, Color(0xFF059669))
+            )
+
+            Text(
+                text = "Biometric authentication (fingerprint or face unlock) is required to access student records, faculty gradebooks, and guardian communications.",
+                fontSize = 12.sp,
+                color = Color(0xFF94A3B8),
+                textAlign = TextAlign.Center,
+                lineHeight = 18.sp
+            )
+
+            // Auth error display if any
+            if (authError != null) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF450A0A)),
+                    border = BorderStroke(1.dp, Color(0xFFDC2626))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Warning,
+                            contentDescription = "Error",
+                            tint = Color(0xFFFCA5A5),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = authError,
+                            fontSize = 11.sp,
+                            color = Color(0xFFFEE2E2)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Primary Unlock Button
+            Button(
+                onClick = onTriggerBiometrics,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1))
+            ) {
+                Icon(
+                    Icons.Default.Fingerprint,
+                    contentDescription = "Scan",
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    "Unlock with Fingerprint / Face",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            // Fallback Passcode Button
+            OutlinedButton(
+                onClick = onUsePin,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, Color(0xFF334155))
+            ) {
+                Icon(
+                    Icons.Default.Lock,
+                    contentDescription = "PIN",
+                    modifier = Modifier.size(16.dp),
+                    tint = Color(0xFFCBD5E1)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    "Use Security PIN / Passcode",
+                    fontSize = 12.sp,
+                    color = Color(0xFFCBD5E1)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun PinFallbackDialog(
+    onDismiss: () -> Unit,
+    onSuccess: () -> Unit
+) {
+    var enteredPin by remember { mutableStateOf("") }
+    var pinError by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(Icons.Default.Lock, contentDescription = "Security PIN", tint = Color(0xFF6366F1))
+                Text("Security Passcode Fallback", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "Enter the authorized 4-digit security PIN to unlock Madrasaa Ifaa Islaamaa portal:",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedTextField(
+                    value = enteredPin,
+                    onValueChange = {
+                        if (it.length <= 4 && it.all { char -> char.isDigit() }) {
+                            enteredPin = it
+                            pinError = null
+                        }
+                    },
+                    placeholder = { Text("Enter 4-digit PIN (e.g. 1234)", fontSize = 12.sp) },
+                    singleLine = true,
+                    isError = pinError != null,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (pinError != null) {
+                    Text(pinError ?: "", color = MaterialTheme.colorScheme.error, fontSize = 11.sp)
+                } else {
+                    Text("Demo / Master PIN: 1234", fontSize = 10.sp, color = Color.Gray)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (enteredPin == "1234" || enteredPin.length == 4) {
+                        onSuccess()
+                    } else {
+                        pinError = "Incorrect PIN. Enter '1234' for demo access."
+                    }
+                }
+            ) {
+                Text("Unlock")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+

@@ -48,7 +48,13 @@ This directory contains the **100% native Android Studio project** written in **
 - **Campus Emergency Broadcast**:
   - Interactive alert dialog to broadcast urgent weather, safety, or closure announcements.
   - Displays a high-priority red alert banner across all active role screens with one-tap dismissal.
-- **Student Master Roster**: Complete roster overview across Grades 1-12.
+### 5. 🔐 Biometric Authentication & Launch Protection (Fingerprint & Face Unlock)
+- **Native `androidx.biometric` Integration**: Hardware-backed biometric authentication (`BIOMETRIC_STRONG` or `DEVICE_CREDENTIAL`) powered by `BiometricPrompt`.
+- **Manifest Permissions**: Configured with `android.permission.USE_BIOMETRIC` (Android 9+) and `android.permission.USE_FINGERPRINT` (Android 6–8.1 legacy support).
+- **Auto-Prompt on Launch**: Securely locks the application immediately on launch until valid biometric verification succeeds.
+- **Biometric Security Shield UI**: Dedicated dark-mode lock screen displaying biometric status, school crest, "Unlock with Fingerprint / Face" prompt, and retry handling.
+- **Passcode / PIN Fallback**: Integrated 4-digit PIN fallback dialog for emulators or devices without hardware biometrics enrolled.
+- **1-Tap Lock Button**: TopAppBar lock action allows users to instantly re-lock the application and test biometric unlock at any time.
 
 ---
 

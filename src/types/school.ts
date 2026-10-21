@@ -162,3 +162,72 @@ export interface DesignPatternItem {
   schoolContextExample: string;
   codeSnippet: string;
 }
+
+// Multi-Teacher Score Entry and Master Aggregated Ledger Types
+export interface TeacherProfile {
+  id: string;
+  name: string;
+  title: string;
+  subjectCode: string;
+  subjectName: string;
+  department: string;
+  avatar: string;
+  assignedGrade: number;
+  assignedSection: string;
+}
+
+export interface StudentScoreInput {
+  studentId: string;
+  studentName: string;
+  rollNumber: string;
+  grade: number;
+  section: string;
+  subjectCode: string;
+  assignmentScore: number; // max 20
+  quizScore: number;       // max 20
+  midtermScore: number;    // max 20
+  finalExamScore: number;  // max 40
+  totalScore: number;      // 0 - 100
+  letterGrade: string;     // A+, A, B, etc.
+  gpaPoint: number;
+  remarks: string;
+  updatedAt?: string;
+}
+
+export interface TeacherSubjectStatus {
+  teacherId: string;
+  teacherName: string;
+  subjectCode: string;
+  subjectName: string;
+  grade: number;
+  section: string;
+  isSubmitted: boolean;
+  submissionDate?: string;
+  gradedCount: number;
+  totalStudents: number;
+}
+
+export interface ConsolidatedClassStudent {
+  studentId: string;
+  studentName: string;
+  rollNumber: string;
+  avatar: string;
+  grade: number;
+  section: string;
+  attendanceRate: number;
+  subjectScores: Record<string, {
+    score: number;
+    letterGrade: string;
+    teacherName: string;
+    remarks: string;
+  }>;
+  totalMarksObtained: number;
+  totalMarksPossible: number;
+  percentage: number;
+  overallGrade: string;
+  gpa: number;
+  rank: number;
+  status: 'Distinction' | 'Promoted' | 'Needs Support' | 'Conditional';
+  conductGrade: string;
+}
+

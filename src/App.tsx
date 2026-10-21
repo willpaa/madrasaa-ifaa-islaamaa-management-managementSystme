@@ -8,7 +8,8 @@ import {
   FeeInvoice, 
   TimetableSlot, 
   NoticeAnnouncement, 
-  ChatMessage 
+  ChatMessage,
+  StudentScoreInput
 } from './types/school';
 import { 
   INITIAL_STUDENTS, 
@@ -18,7 +19,8 @@ import {
   INITIAL_INVOICES, 
   INITIAL_TIMETABLE, 
   INITIAL_ANNOUNCEMENTS, 
-  INITIAL_CHAT 
+  INITIAL_CHAT,
+  INITIAL_MULTI_TEACHER_SCORES
 } from './data/mockSchoolData';
 
 import { MobileFrame } from './components/mobile/MobileFrame';
@@ -88,6 +90,9 @@ export default function App() {
   const [students, setStudents] = useState<Student[]>(INITIAL_STUDENTS);
   const [selectedChildId, setSelectedChildId] = useState<string>('STU-101');
   const [grades, setGrades] = useState<SubjectGrade[]>(INITIAL_GRADES_SOPHIA);
+  const [multiTeacherScores, setMultiTeacherScores] = useState<Record<string, Record<string, StudentScoreInput>>>(
+    INITIAL_MULTI_TEACHER_SCORES
+  );
   const [assignments, setAssignments] = useState<Assignment[]>(INITIAL_ASSIGNMENTS);
   const [invoices, setInvoices] = useState<FeeInvoice[]>(INITIAL_INVOICES);
   const [timetable] = useState<TimetableSlot[]>(INITIAL_TIMETABLE);
@@ -554,6 +559,8 @@ export default function App() {
                   assignments={assignments}
                   onAddAssignment={handleAddAssignment}
                   onRecordAttendance={handleRecordAttendance}
+                  scoresData={multiTeacherScores}
+                  onUpdateScores={setMultiTeacherScores}
                 />
               )}
 

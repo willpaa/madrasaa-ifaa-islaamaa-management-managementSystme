@@ -66,3 +66,45 @@ data class FeeInvoice(
     val dueDate: String,
     val isPaid: Boolean
 )
+
+data class TeacherProfile(
+    val id: String,
+    val name: String,
+    val subjectCode: String,
+    val subjectName: String,
+    val department: String
+)
+
+data class StudentSubjectScore(
+    val studentId: String,
+    val studentName: String,
+    val rollNumber: String,
+    val subjectCode: String,
+    var assignmentScore: Int = 18,
+    var quizScore: Int = 18,
+    var midtermScore: Int = 18,
+    var finalExamScore: Int = 36,
+    var remarks: String = ""
+) {
+    val totalScore: Int get() = assignmentScore + quizScore + midtermScore + finalExamScore
+    val letterGrade: String get() = when {
+        totalScore >= 95 -> "A+"
+        totalScore >= 90 -> "A"
+        totalScore >= 85 -> "B+"
+        totalScore >= 80 -> "B"
+        totalScore >= 75 -> "C+"
+        totalScore >= 65 -> "C"
+        totalScore >= 50 -> "D"
+        else -> "F"
+    }
+    val gpaPoint: Float get() = when {
+        totalScore >= 95 -> 4.0f
+        totalScore >= 90 -> 3.9f
+        totalScore >= 85 -> 3.5f
+        totalScore >= 80 -> 3.0f
+        totalScore >= 75 -> 2.5f
+        totalScore >= 65 -> 2.0f
+        totalScore >= 50 -> 1.0f
+        else -> 0.0f
+    }
+}
